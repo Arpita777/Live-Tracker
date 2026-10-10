@@ -45,3 +45,32 @@
   display: flex;
   gap: 8px;
 }
+
+.column-over {
+  outline: 2px dashed rgba(100, 150, 255, 0.8);
+}
+
+.card {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card select,
+.card button {
+  cursor: pointer;
+}
+
+.drag-handle {
+  opacity: 0.5;
+}
