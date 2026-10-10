@@ -17,7 +17,7 @@ export async function createIssue(input: NewIssueInput): Promise<Issue> {
     projectId: input.projectId,
     title: input.title,
     description: input.description ?? "",
-    status: input.status ?? "todo",
+    status: input.status ?? "backlog",
     priority: input.priority ?? "none",
     assigneeId: null,
     labels: [],
