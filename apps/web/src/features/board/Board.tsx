@@ -1,11 +1,20 @@
 import { useMemo } from "react";
-import type { Issue, IssueStatusType } from "@tracker/schema";
-import { BOARD_COLUMNS, STATUS_LABELS } from "./constants";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { IssueStatus, type Issue, type IssueStatusType } from "@tracker/schema";
+import { updateIssue } from "../../db/issueRepo";
+import { BOARD_COLUMNS } from "./constants";
+import { Column } from "./Column";
 import { IssueCard } from "./IssueCard";
 import "./board.css";
 
 export function Board({ issues }: { issues: Issue[] }) {
-  // Put each issue into the bucket for its status
   const byStatus = useMemo(() => {
     const groups: Record<IssueStatusType, Issue[]> = {
       backlog: [],
@@ -19,18 +28,36 @@ export function Board({ issues }: { issues: Issue[] }) {
     return groups;
   }, [issues]);
 
+  // Only start dragging after the pointer moves 5px, so plain clicks still work
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return; // dropped outside any column
+
+    const parsed = IssueStatus.safeParse(over.id);
+    if (!parsed.success) return;
+
+    const issue = issues.find((i) => i.id === active.id);
+    if (issue && issue.status !== parsed.data) {
+      updateIssue(issue.id, { status: parsed.data });
+    }
+  }
+
   return (
-    <div className="board">
-      {BOARD_COLUMNS.map((status) => (
-        <section key={status} className="column">
-          <h2>
-            {STATUS_LABELS[status]} <span>{byStatus[status].length}</span>
-          </h2>
-          {byStatus[status].map((issue) => (
-            <IssueCard key={issue.id} issue={issue} />
-          ))}
-        </section>
-      ))}
-    </div>
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="board">
+        {BOARD_COLUMNS.map((status) => (
+          <Column key={status} status={status} count={byStatus[status].length}>
+            {byStatus[status].map((issue) => (
+              <IssueCard key={issue.id} issue={issue} />
+            ))}
+          </Column>
+        ))}
+      </div>
+    </DndContext>
   );
 }
