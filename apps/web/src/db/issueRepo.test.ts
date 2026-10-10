@@ -25,7 +25,7 @@ describe("issueRepo", () => {
       title: "Write tests",
     });
 
-    expect(issue.status).toBe("todo");
+    expect(issue.status).toBe("backlog");
     expect(issue.deletedAt).toBeNull();
 
     const saved = await db.issues.get(issue.id);

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "./db/db";
-import { createIssue, deleteIssue, updateIssue } from "./db/issueRepo";
+import { createIssue } from "./db/issueRepo";
+import { Board } from "./features/board/Board";
 
-const PROJECT_ID = "11111111-1111-4111-8111-111111111111"; // fixed for now
+const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 
 export default function App() {
   const [title, setTitle] = useState("");
@@ -25,27 +26,20 @@ export default function App() {
   }
 
   return (
-    <div>
+    <div style={{ padding: 24 }}>
       <h1>Tracker</h1>
 
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="New issue title"
-      />
-      <button onClick={handleAdd}>Add</button>
+      <div style={{ marginBottom: 16 }}>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          placeholder="New issue title"
+        />{" "}
+        <button onClick={handleAdd}>Add</button>
+      </div>
 
-      <ul>
-        {issues?.map((i) => (
-          <li key={i.id}>
-            {i.title} [{i.status}]{" "}
-            <button onClick={() => updateIssue(i.id, { status: "done" })}>
-              Mark done
-            </button>{" "}
-            <button onClick={() => deleteIssue(i.id)}>Delete</button>
-          </li>
-        ))}
-      </ul>
+      <Board issues={issues ?? []} />
     </div>
   );
 }
