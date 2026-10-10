@@ -22,5 +22,6 @@ jobs:
 
       - run: pnpm --filter @tracker/schema typecheck
       - run: pnpm --filter @tracker/schema test
+      - run: pnpm --filter web test
       - run: pnpm --filter web lint
       - run: pnpm --filter web build
