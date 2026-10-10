@@ -1,37 +1,49 @@
+import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import type { Issue } from "@tracker/schema";
 import { db } from "./db/db";
+import { createIssue, deleteIssue, updateIssue } from "./db/issueRepo";
 
-const projectId = crypto.randomUUID();
-
-async function addTestIssue() {
-  const now = Date.now();
-  const issue: Issue = {
-    id: crypto.randomUUID(),
-    projectId,
-    title: `Test issue ${new Date().toLocaleTimeString()}`,
-    description: "",
-    status: "todo",
-    priority: "medium",
-    assigneeId: null,
-    labels: [],
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  };
-  await db.issues.put(issue);
-}
+const PROJECT_ID = "11111111-1111-4111-8111-111111111111"; // fixed for now
 
 export default function App() {
-  const issues = useLiveQuery(() => db.issues.toArray(), []);
+  const [title, setTitle] = useState("");
+
+  const issues = useLiveQuery(
+    () =>
+      db.issues
+        .where("projectId")
+        .equals(PROJECT_ID)
+        .filter((i) => i.deletedAt === null)
+        .toArray(),
+    []
+  );
+
+  async function handleAdd() {
+    if (!title.trim()) return;
+    await createIssue({ projectId: PROJECT_ID, title: title.trim() });
+    setTitle("");
+  }
 
   return (
     <div>
       <h1>Tracker</h1>
-      <button onClick={addTestIssue}>Add test issue</button>
+
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="New issue title"
+      />
+      <button onClick={handleAdd}>Add</button>
+
       <ul>
         {issues?.map((i) => (
-          <li key={i.id}>{i.title}</li>
+          <li key={i.id}>
+            {i.title} [{i.status}]{" "}
+            <button onClick={() => updateIssue(i.id, { status: "done" })}>
+              Mark done
+            </button>{" "}
+            <button onClick={() => deleteIssue(i.id)}>Delete</button>
+          </li>
         ))}
       </ul>
     </div>
