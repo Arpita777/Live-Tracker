@@ -1,17 +1,19 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { IssueStatus, type Issue, type IssueStatusType } from "@tracker/schema";
 import { updateIssue } from "../../db/issueRepo";
 import { BOARD_COLUMNS } from "./constants";
 import { Column } from "./Column";
-import { IssueCard } from "./IssueCard";
+import { IssueCardView } from "./IssueCardView";
 import "./board.css";
 
 export function Board({
@@ -21,6 +23,9 @@ export function Board({
   issues: Issue[];
   onOpenIssue: (id: string) => void;
 }) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeIssue = issues.find((i) => i.id === activeId) ?? null;
+
   const byStatus = useMemo(() => {
     const groups: Record<IssueStatusType, Issue[]> = {
       backlog: [],
@@ -34,15 +39,19 @@ export function Board({
     return groups;
   }, [issues]);
 
-  // Only start dragging after the pointer moves 5px, so plain clicks still work
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor)
   );
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     const { active, over } = event;
-    if (!over) return; // dropped outside any column
+    if (!over) return;
 
     const parsed = IssueStatus.safeParse(over.id);
     if (!parsed.success) return;
@@ -54,16 +63,31 @@ export function Board({
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      autoScroll={false}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
       <div className="board">
         {BOARD_COLUMNS.map((status) => (
-          <Column key={status} status={status} count={byStatus[status].length}>
-            {byStatus[status].map((issue) => (
-              <IssueCard key={issue.id} issue={issue} onOpen={onOpenIssue} />
-            ))}
-          </Column>
+          <Column
+            key={status}
+            status={status}
+            issues={byStatus[status]}
+            onOpenIssue={onOpenIssue}
+          />
         ))}
       </div>
+
+      <DragOverlay>
+        {activeIssue ? (
+          <div className="card card-overlay">
+            <IssueCardView issue={activeIssue} />
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
