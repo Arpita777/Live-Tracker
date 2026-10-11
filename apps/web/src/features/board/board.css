@@ -51,9 +51,10 @@
 }
 
 .card {
-  position: relative;
-  cursor: grab;
-  touch-action: none;
+  margin-bottom: 0;
+  box-sizing: border-box;
+  height: 112px; /* 120px slot minus an 8px gap */
+  overflow: hidden;
 }
 
 .card:active {
@@ -73,4 +74,16 @@
 
 .drag-handle {
   opacity: 0.5;
+}
+
+.column-scroll {
+  height: calc(100vh - 250px); /* fixed height is required for virtualization */
+  min-height: 300px;
+  overflow-y: auto;
+}
+
+.card-overlay {
+  cursor: grabbing;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  background: Canvas; /* solid, so you can't see through it */
 }

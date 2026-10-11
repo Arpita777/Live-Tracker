@@ -1,17 +1,30 @@
-import type { ReactNode } from "react";
+import { useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import type { IssueStatusType } from "@tracker/schema";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import type { Issue, IssueStatusType } from "@tracker/schema";
 import { STATUS_LABELS } from "./constants";
+import { IssueCard } from "./IssueCard";
+
+const CARD_HEIGHT = 120; // every card is treated as this tall (px)
 
 type Props = {
   status: IssueStatusType;
-  count: number;
-  children: ReactNode;
+  issues: Issue[];
+  onOpenIssue: (id: string) => void;
 };
 
-export function Column({ status, count, children }: Props) {
-  // The column's id is its status, so on drop we know where the card went
+export function Column({ status, issues, onOpenIssue }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+
+  // The scrolling box: the virtualizer watches this element
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: issues.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => CARD_HEIGHT,
+    overscan: 5, // draw 5 extra cards above/below for smooth scrolling
+  });
 
   return (
     <section
@@ -19,9 +32,34 @@ export function Column({ status, count, children }: Props) {
       className={isOver ? "column column-over" : "column"}
     >
       <h2>
-        {STATUS_LABELS[status]} <span>{count}</span>
+        {STATUS_LABELS[status]} <span>{issues.length}</span>
       </h2>
-      {children}
+
+      <div ref={scrollRef} className="column-scroll">
+        {/* A tall invisible box so the scrollbar has the right size */}
+        <div
+          style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+        >
+          {virtualizer.getVirtualItems().map((row) => {
+            const issue = issues[row.index]!;
+            return (
+              <div
+                key={issue.id}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: CARD_HEIGHT,
+                  transform: `translateY(${row.start}px)`,
+                }}
+              >
+                <IssueCard issue={issue} onOpen={onOpenIssue} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </section>
   );
 }

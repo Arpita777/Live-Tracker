@@ -1,7 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
-import { IssueStatus, type Issue, type IssueStatusType } from "@tracker/schema";
-import { deleteIssue, updateIssue } from "../../db/issueRepo";
-import { STATUS_LABELS } from "./constants";
+import { IssueCardView } from "./IssueCardView";
+import { type Issue } from "@tracker/schema";
 
 export function IssueCard({
   issue,
@@ -34,7 +33,7 @@ export function IssueCard({
         onOpen(issue.id);
       }}
     >
-      <div className="card-header">
+      {/* <div className="card-header">
         <button className="drag-handle" aria-label={`Drag ${issue.title}`}>
           ⠿
         </button>
@@ -58,7 +57,8 @@ export function IssueCard({
         </select>
         <button onClick={() => deleteIssue(issue.id)}>Delete</button>
         <button onClick={() => onOpen(issue.id)}>Open</button>
-      </div>
+      </div> */}
+      <IssueCardView issue={issue} onOpen={onOpen} />
     </div>
   );
 }
