@@ -10,6 +10,7 @@ import {
   type Filters,
 } from "./features/board/filterIssues";
 import { IssuePanel } from "./features/issues/IssuePanel";
+import { clearIssues, seedIssues } from "./db/seed";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -72,6 +73,14 @@ export default function App() {
   return (
     <div style={{ padding: 24 }}>
       <h1>Tracker</h1>
+      {import.meta.env.DEV && (
+        <div style={{ marginBottom: 16 }}>
+          <button onClick={() => seedIssues(PROJECT_ID)}>
+            Seed 10,000 issues
+          </button>{" "}
+          <button onClick={() => clearIssues()}>Clear all issues</button>
+        </div>
+      )}
 
       <div style={{ marginBottom: 16 }}>
         <input
