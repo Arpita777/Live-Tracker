@@ -14,7 +14,13 @@ import { Column } from "./Column";
 import { IssueCard } from "./IssueCard";
 import "./board.css";
 
-export function Board({ issues }: { issues: Issue[] }) {
+export function Board({
+  issues,
+  onOpenIssue,
+}: {
+  issues: Issue[];
+  onOpenIssue: (id: string) => void;
+}) {
   const byStatus = useMemo(() => {
     const groups: Record<IssueStatusType, Issue[]> = {
       backlog: [],
@@ -53,7 +59,7 @@ export function Board({ issues }: { issues: Issue[] }) {
         {BOARD_COLUMNS.map((status) => (
           <Column key={status} status={status} count={byStatus[status].length}>
             {byStatus[status].map((issue) => (
-              <IssueCard key={issue.id} issue={issue} />
+              <IssueCard key={issue.id} issue={issue} onOpen={onOpenIssue} />
             ))}
           </Column>
         ))}

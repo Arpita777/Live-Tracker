@@ -3,7 +3,13 @@ import { IssueStatus, type Issue, type IssueStatusType } from "@tracker/schema";
 import { deleteIssue, updateIssue } from "../../db/issueRepo";
 import { STATUS_LABELS } from "./constants";
 
-export function IssueCard({ issue }: { issue: Issue }) {
+export function IssueCard({
+  issue,
+  onOpen,
+}: {
+  issue: Issue;
+  onOpen: (id: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: issue.id });
 
@@ -22,6 +28,11 @@ export function IssueCard({ issue }: { issue: Issue }) {
       className="card"
       {...attributes}
       {...listeners}
+      onClick={(e) => {
+        // Ignore clicks on the dropdowns and buttons inside the card
+        if ((e.target as HTMLElement).closest("select, button")) return;
+        onOpen(issue.id);
+      }}
     >
       <div className="card-header">
         <button className="drag-handle" aria-label={`Drag ${issue.title}`}>
@@ -46,6 +57,7 @@ export function IssueCard({ issue }: { issue: Issue }) {
           ))}
         </select>
         <button onClick={() => deleteIssue(issue.id)}>Delete</button>
+        <button onClick={() => onOpen(issue.id)}>Open</button>
       </div>
     </div>
   );
