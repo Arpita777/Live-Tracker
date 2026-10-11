@@ -1,8 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import { IssueCardView } from "./IssueCardView";
-import { IssueStatus, type Issue, type IssueStatusType } from "@tracker/schema";
-import { deleteIssue, updateIssue } from "../../db/issueRepo";
-import { STATUS_LABELS } from "./constants";
+import { type Issue } from "@tracker/schema";
 
 export function IssueCard({
   issue,
