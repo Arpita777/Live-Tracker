@@ -17,7 +17,7 @@ export function FilterBar({
   onClear,
 }: Props) {
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+    <div className="toolbar">
       <input
         type="search"
         value={searchText}

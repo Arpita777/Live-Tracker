@@ -12,8 +12,8 @@
 .palette {
   width: 520px;
   max-width: 92vw;
-  background: Canvas;
-  color: CanvasText;
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid rgba(128, 128, 128, 0.4);
   border-radius: 10px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);

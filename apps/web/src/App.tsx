@@ -16,6 +16,7 @@ import {
   CommandPalette,
   type Command,
 } from "./features/command-palette/CommandPalette";
+import "./app.css";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -97,26 +98,33 @@ export default function App() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Tracker</h1>
+    <div className="app">
+      <header className="app-header">
+        <h1>Tracker</h1>
+        <div className="add-form">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder="New issue title"
+            aria-label="New issue title"
+          />
+          <button className="primary" onClick={handleAdd}>
+            Add issue
+          </button>
+        </div>
+        <span className="hint">Cmd+K for commands</span>
+      </header>
+
       {import.meta.env.DEV && (
-        <div style={{ marginBottom: 16 }}>
+        <div className="dev-bar">
+          Dev tools:
           <button onClick={() => seedIssues(PROJECT_ID)}>
             Seed 10,000 issues
-          </button>{" "}
-          <button onClick={() => clearIssues()}>Clear all issues</button>
+          </button>
+          <button onClick={() => clearIssues()}>Clear all</button>
         </div>
       )}
-
-      <div style={{ marginBottom: 16 }}>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="New issue title"
-        />{" "}
-        <button onClick={handleAdd}>Add</button>
-      </div>
 
       <FilterBar
         searchText={searchText}
@@ -126,18 +134,16 @@ export default function App() {
         onClear={handleClear}
       />
 
-      {hasFilters && (
-        <p style={{ opacity: 0.7 }}>
-          Showing {visibleIssues.length} of {total} issues
-          {visibleIssues.length === 0 && " (nothing matches, try Clear)"}
-        </p>
-      )}
+      <p className="count">
+        Showing {visibleIssues.length} of {total} issues
+        {hasFilters &&
+          visibleIssues.length === 0 &&
+          " (nothing matches, try Clear)"}
+        {" · "}Tab to a card, arrows move, Enter opens, [ ] change status, Space
+        drags
+      </p>
 
-      <div style={{ opacity: isPending ? 0.6 : 1 }}>
-        <p style={{ fontSize: 12, opacity: 0.6, margin: "0 0 8px" }}>
-          Keyboard: Tab to a card, arrows move, Enter opens, [ ] change status,
-          Space drags, Cmd+K palette
-        </p>
+      <div className="board-area" style={{ opacity: isPending ? 0.6 : 1 }}>
         <Board issues={visibleIssues} onOpenIssue={setSelectedId} />
       </div>
 
@@ -148,6 +154,7 @@ export default function App() {
           onClose={() => setSelectedId(null)}
         />
       )}
+
       {paletteOpen && (
         <CommandPalette
           issues={issues ?? []}
