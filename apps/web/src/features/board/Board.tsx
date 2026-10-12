@@ -1,4 +1,10 @@
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
+import { findPosition, nextPosition, type NavKey } from "./boardNav";
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +30,8 @@ export function Board({
   onOpenIssue: (id: string) => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState<string | null>(null);
+  const clearFocusRequest = useCallback(() => setFocusRequest(null), []);
   const activeIssue = issues.find((i) => i.id === activeId) ?? null;
 
   const byStatus = useMemo(() => {
@@ -39,9 +47,16 @@ export function Board({
     return groups;
   }, [issues]);
 
+  const columnIds = useMemo(
+    () => BOARD_COLUMNS.map((s) => byStatus[s].map((i) => i.id)),
+    [byStatus]
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor, {
+      keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space"] },
+    })
   );
 
   function handleDragStart(event: DragStartEvent) {
@@ -62,6 +77,34 @@ export function Board({
     }
   }
 
+  function handleKeyDown(e: ReactKeyboardEvent<HTMLDivElement>) {
+    if (activeId) return; // a drag is in progress, so dnd-kit owns the arrow keys
+
+    // Only react when the card itself is focused, not the dropdown or buttons inside it
+    const el = (e.target as HTMLElement).closest<HTMLElement>("[data-card-id]");
+    if (!el || el !== e.target) return;
+
+    const id = el.dataset.cardId!;
+    const pos = findPosition(columnIds, id);
+    if (!pos) return;
+
+    if (e.key.startsWith("Arrow")) {
+      e.preventDefault();
+      const next = nextPosition(columnIds, pos, e.key as NavKey);
+      const nextId = columnIds[next.col]?.[next.row];
+      if (nextId && nextId !== id) setFocusRequest(nextId);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      onOpenIssue(id);
+    } else if (e.key === "[" || e.key === "]") {
+      const target = BOARD_COLUMNS[pos.col + (e.key === "[" ? -1 : 1)];
+      if (target) {
+        updateIssue(id, { status: target });
+        setFocusRequest(id); // the card is rebuilt in the new column, so focus it again
+      }
+    }
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -70,13 +113,15 @@ export function Board({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="board">
+      <div className="board" onKeyDown={handleKeyDown}>
         {BOARD_COLUMNS.map((status) => (
           <Column
             key={status}
             status={status}
             issues={byStatus[status]}
             onOpenIssue={onOpenIssue}
+            focusRequestId={focusRequest}
+            onFocusDone={clearFocusRequest}
           />
         ))}
       </div>
