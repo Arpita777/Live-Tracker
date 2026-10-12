@@ -1,64 +1,87 @@
 .board {
+  height: 100%;
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 12px;
   overflow-x: auto;
 }
 
 .column {
-  background: rgba(128, 128, 128, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 10px;
 }
 
 .column h2 {
-  font-size: 14px;
-  margin: 0 0 12px;
-}
-
-.column h2 span {
-  opacity: 0.6;
-  margin-left: 4px;
-}
-
-.card {
-  background: rgba(128, 128, 128, 0.15);
-  border: 1px solid rgba(128, 128, 128, 0.3);
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 8px;
-}
-
-.card-title {
-  font-weight: 600;
-}
-
-.card-meta {
-  font-size: 12px;
-  opacity: 0.7;
-  margin: 4px 0 8px;
-}
-
-.card-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.column h2 span.count-pill {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .column-over {
-  outline: 2px dashed rgba(100, 150, 255, 0.8);
+  outline: 2px dashed var(--accent);
+}
+
+.column-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.dot-backlog {
+  background: #9aa1ab;
+}
+.dot-todo {
+  background: #4c9aff;
+}
+.dot-in_progress {
+  background: #f5a524;
+}
+.dot-done {
+  background: #3fb950;
 }
 
 .card {
-  margin-bottom: 0;
-  box-sizing: border-box;
-  height: 112px; /* 120px slot minus an 8px gap */
+  position: relative;
+  height: 112px; /* the 120px slot minus an 8px gap */
   overflow: hidden;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.card:hover {
+  border-color: var(--accent);
 }
 
 .card:active {
   cursor: grabbing;
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .card-header {
@@ -67,28 +90,61 @@
   gap: 8px;
 }
 
-.card select,
-.card button {
-  cursor: pointer;
-}
-
 .drag-handle {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
-.column-scroll {
-  height: calc(100vh - 250px); /* fixed height is required for virtualization */
-  min-height: 300px;
-  overflow-y: auto;
+.card-title {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-meta {
+  margin: 6px 0 8px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.card-actions select,
+.card-actions button {
+  font-size: 12px;
+  padding: 2px 6px;
 }
 
 .card-overlay {
   cursor: grabbing;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-  background: Canvas; /* solid, so you can't see through it */
 }
 
-.card:focus-visible {
-  outline: 2px solid rgba(100, 150, 255, 0.9);
-  outline-offset: -2px;
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.badge-low {
+  background: #1f6feb33;
+  color: #4c9aff;
+}
+.badge-medium {
+  background: #f5a52433;
+  color: #d68a00;
+}
+.badge-high {
+  background: #f0883e33;
+  color: #e5671b;
+}
+.badge-urgent {
+  background: #f8514933;
+  color: #e5484d;
 }

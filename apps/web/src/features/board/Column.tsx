@@ -47,7 +47,9 @@ export function Column({
       className={isOver ? "column column-over" : "column"}
     >
       <h2>
-        {STATUS_LABELS[status]} <span>{issues.length}</span>
+        <span className={`dot dot-${status}`} />
+        {STATUS_LABELS[status]}
+        <span className="count-pill">{issues.length}</span>
       </h2>
 
       <div ref={scrollRef} className="column-scroll">

@@ -18,7 +18,11 @@ export function IssueCardView({
         </span>
         <div className="card-title">{issue.title}</div>
       </div>
-      <div className="card-meta">Priority: {issue.priority}</div>
+      <div className="card-meta">
+        <span className={`badge badge-${issue.priority}`}>
+          {issue.priority}
+        </span>
+      </div>
       <div className="card-actions">
         <select
           value={issue.status}
