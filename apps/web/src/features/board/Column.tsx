@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Issue, IssueStatusType } from "@tracker/schema";
@@ -11,9 +11,17 @@ type Props = {
   status: IssueStatusType;
   issues: Issue[];
   onOpenIssue: (id: string) => void;
+  focusRequestId: string | null;
+  onFocusDone: () => void;
 };
 
-export function Column({ status, issues, onOpenIssue }: Props) {
+export function Column({
+  status,
+  issues,
+  onOpenIssue,
+  focusRequestId,
+  onFocusDone,
+}: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   // The scrolling box: the virtualizer watches this element
@@ -25,6 +33,13 @@ export function Column({ status, issues, onOpenIssue }: Props) {
     estimateSize: () => CARD_HEIGHT,
     overscan: 5, // draw 5 extra cards above/below for smooth scrolling
   });
+
+  // If the card we want to focus lives here, scroll it into the visible window
+  useEffect(() => {
+    if (!focusRequestId) return;
+    const index = issues.findIndex((i) => i.id === focusRequestId);
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: "auto" });
+  }, [focusRequestId, issues, virtualizer]);
 
   return (
     <section
@@ -54,7 +69,12 @@ export function Column({ status, issues, onOpenIssue }: Props) {
                   transform: `translateY(${row.start}px)`,
                 }}
               >
-                <IssueCard issue={issue} onOpen={onOpenIssue} />
+                <IssueCard
+                  issue={issue}
+                  onOpen={onOpenIssue}
+                  shouldFocus={issue.id === focusRequestId}
+                  onFocusDone={onFocusDone}
+                />
               </div>
             );
           })}

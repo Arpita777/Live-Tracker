@@ -134,6 +134,10 @@ export default function App() {
       )}
 
       <div style={{ opacity: isPending ? 0.6 : 1 }}>
+        <p style={{ fontSize: 12, opacity: 0.6, margin: "0 0 8px" }}>
+          Keyboard: Tab to a card, arrows move, Enter opens, [ ] change status,
+          Space drags, Cmd+K palette
+        </p>
         <Board issues={visibleIssues} onOpenIssue={setSelectedId} />
       </div>
 
