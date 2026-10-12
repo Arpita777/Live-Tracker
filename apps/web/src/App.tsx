@@ -31,6 +31,7 @@ export default function App() {
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [isPending, startTransition] = useTransition();
+  const pendingCount = useLiveQuery(() => db.outbox.count(), [], 0);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -114,6 +115,7 @@ export default function App() {
           </button>
         </div>
         <span className="hint">Cmd+K for commands</span>
+        <span className="hint">{pendingCount} pending changes</span>
       </header>
 
       {import.meta.env.DEV && (

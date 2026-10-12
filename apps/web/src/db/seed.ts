@@ -57,7 +57,9 @@ export async function seedIssues(
 
   await db.issues.bulkAdd(issues);
 }
-
 export async function clearIssues(): Promise<void> {
-  await db.issues.clear();
+  await db.transaction("rw", db.issues, db.outbox, async () => {
+    await db.issues.clear();
+    await db.outbox.clear();
+  });
 }
