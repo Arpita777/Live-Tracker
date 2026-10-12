@@ -6,6 +6,7 @@ export const MutationSchema = z.object({
   type: z.enum(["create", "update"]),
   changes: z.record(z.string(), z.unknown()),
   createdAt: z.number().int(),
+  hlc: z.string(),
 });
 
 export type Mutation = z.infer<typeof MutationSchema>;

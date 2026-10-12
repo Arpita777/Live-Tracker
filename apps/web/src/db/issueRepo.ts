@@ -1,5 +1,6 @@
 import { IssueSchema, type Issue, type Mutation } from "@tracker/schema";
 import { db } from "./db";
+import { clock } from "../sync/clock";
 
 type NewIssueInput = {
   projectId: string;
@@ -21,6 +22,7 @@ function enqueue(
     type,
     changes,
     createdAt: Date.now(),
+    hlc: clock.now(),
   });
 }
 

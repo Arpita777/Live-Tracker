@@ -138,4 +138,12 @@ describe("issueRepo", () => {
     ).rejects.toThrow();
     expect(await db.outbox.count()).toBe(0);
   });
+
+  it("stamps notes with increasing HLC values", async () => {
+    const issue = await createIssue({ projectId: PROJECT_ID, title: "Stamp" });
+    await updateIssue(issue.id, { priority: "high" });
+
+    const [first, second] = await db.outbox.orderBy("seq").toArray();
+    expect(first!.hlc < second!.hlc).toBe(true);
+  });
 });
