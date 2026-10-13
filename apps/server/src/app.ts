@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { formatHlc } from "@tracker/schema";
 import type { Db } from "./db";
+import { PushRequestSchema } from "@tracker/schema";
+import { pushMutations } from "./push";
 
 // The app is built from a db we pass in, so tests can give it an in-memory one
 export function createApp(db: Db) {
@@ -19,6 +21,25 @@ export function createApp(db: Db) {
       // proves the shared package is linked
       sampleHlc: formatHlc({ wall: Date.now(), counter: 0, node: "server" }),
     });
+  });
+
+  app.post("/push", async (c) => {
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Body must be valid JSON" }, 400);
+    }
+
+    const parsed = PushRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid request", issues: parsed.error.issues },
+        400
+      );
+    }
+
+    return c.json(pushMutations(db, parsed.data.mutations));
   });
 
   return app;
