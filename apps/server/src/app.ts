@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { formatHlc } from "@tracker/schema";
 import type { Db } from "./db";
-import { PushRequestSchema } from "@tracker/schema";
 import { pushMutations } from "./push";
+import { PullQuerySchema, PushRequestSchema } from "@tracker/schema";
+import { pullMutations } from "./pull";
 
 // The app is built from a db we pass in, so tests can give it an in-memory one
 export function createApp(db: Db) {
@@ -21,6 +22,18 @@ export function createApp(db: Db) {
       // proves the shared package is linked
       sampleHlc: formatHlc({ wall: Date.now(), counter: 0, node: "server" }),
     });
+  });
+
+  app.get("/pull", (c) => {
+    const parsed = PullQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid query", issues: parsed.error.issues },
+        400
+      );
+    }
+    const { after, limit } = parsed.data;
+    return c.json(pullMutations(db, after, limit));
   });
 
   app.post("/push", async (c) => {
