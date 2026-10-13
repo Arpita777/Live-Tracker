@@ -16,6 +16,19 @@ class TrackerDB extends Dexie {
       issues: "id, projectId, status, updatedAt",
       outbox: "++seq, issueId",
     });
+    this.version(3)
+      .stores({
+        issues: "id, projectId, status, updatedAt",
+        outbox: "++seq, issueId",
+      })
+      .upgrade((tx) =>
+        tx
+          .table("issues")
+          .toCollection()
+          .modify((issue) => {
+            issue.clocks = issue.clocks ?? {};
+          })
+      );
   }
 }
 

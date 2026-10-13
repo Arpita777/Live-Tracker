@@ -15,6 +15,7 @@ function makeIssue(title: string, priority: Issue["priority"]): Issue {
     createdAt: 1,
     updatedAt: 1,
     deletedAt: null,
+    clocks: {},
   };
 }
 

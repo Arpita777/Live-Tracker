@@ -1,4 +1,10 @@
-import { IssueSchema, type Issue, type Mutation } from "@tracker/schema";
+import {
+  IssueSchema,
+  MERGEABLE_FIELDS,
+  applyChanges,
+  type Issue,
+  type Mutation,
+} from "@tracker/schema";
 import { db } from "./db";
 import { clock } from "../sync/clock";
 
@@ -14,7 +20,8 @@ type NewIssueInput = {
 function enqueue(
   issueId: string,
   type: Mutation["type"],
-  changes: Record<string, unknown>
+  changes: Record<string, unknown>,
+  hlc: string
 ) {
   return db.outbox.add({
     id: crypto.randomUUID(),
@@ -22,12 +29,13 @@ function enqueue(
     type,
     changes,
     createdAt: Date.now(),
-    hlc: clock.now(),
+    hlc,
   });
 }
 
 export async function createIssue(input: NewIssueInput): Promise<Issue> {
   const now = Date.now();
+  const hlc = clock.now();
 
   const issue: Issue = IssueSchema.parse({
     id: crypto.randomUUID(),
@@ -41,12 +49,13 @@ export async function createIssue(input: NewIssueInput): Promise<Issue> {
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
+    clocks: Object.fromEntries(MERGEABLE_FIELDS.map((f) => [f, hlc])),
   });
 
   // Both writes succeed together, or neither happens
   await db.transaction("rw", db.issues, db.outbox, async () => {
     await db.issues.add(issue);
-    await enqueue(issue.id, "create", { ...issue });
+    await enqueue(issue.id, "create", { ...issue }, hlc);
   });
 
   return issue;
@@ -54,14 +63,17 @@ export async function createIssue(input: NewIssueInput): Promise<Issue> {
 
 export async function updateIssue(
   id: string,
-  changes: Partial<Omit<Issue, "id" | "createdAt">>
+  changes: Partial<Omit<Issue, "id" | "createdAt" | "clocks" | "updatedAt">>
 ): Promise<void> {
+  const hlc = clock.now();
   const fullChanges = { ...changes, updatedAt: Date.now() };
 
   await db.transaction("rw", db.issues, db.outbox, async () => {
-    const updatedCount = await db.issues.update(id, fullChanges);
-    if (updatedCount === 0) return; // no such issue, so nothing to send
-    await enqueue(id, "update", fullChanges);
+    const existing = await db.issues.get(id);
+    if (!existing) return; // no such issue, so nothing to send
+
+    await db.issues.put(applyChanges(existing, fullChanges, hlc));
+    await enqueue(id, "update", fullChanges, hlc);
   });
 }
 

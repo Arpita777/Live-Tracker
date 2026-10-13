@@ -146,4 +146,15 @@ describe("issueRepo", () => {
     const [first, second] = await db.outbox.orderBy("seq").toArray();
     expect(first!.hlc < second!.hlc).toBe(true);
   });
+
+  it("records which note last wrote each field", async () => {
+    const issue = await createIssue({ projectId: PROJECT_ID, title: "Clocks" });
+    await updateIssue(issue.id, { status: "done" });
+
+    const notes = await db.outbox.orderBy("seq").toArray();
+    const saved = await db.issues.get(issue.id);
+
+    expect(saved?.clocks.status).toBe(notes[1]!.hlc); // changed field
+    expect(saved?.clocks.title).toBe(notes[0]!.hlc); // untouched field keeps the creation stamp
+  });
 });
