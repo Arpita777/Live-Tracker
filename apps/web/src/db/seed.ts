@@ -53,6 +53,7 @@ export async function seedIssues(
     createdAt: now + i, // slightly different times so the order is stable
     updatedAt: now + i,
     deletedAt: null,
+    clocks: {},
   }));
 
   await db.issues.bulkAdd(issues);

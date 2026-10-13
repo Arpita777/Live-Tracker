@@ -26,7 +26,9 @@ export const IssueSchema = z.object({
   labels: z.array(z.string()),
   createdAt: z.number().int(), // epoch ms for now; we upgrade to HLC in M4
   updatedAt: z.number().int(),
-  deletedAt: z.number().int().nullable(), // tombstone for soft deletes
+  deletedAt: z.number().int().nullable(),
+  // field name -> HLC of the last write to that field
+  clocks: z.record(z.string(), z.string()).default({}),
 });
 
 export type Issue = z.infer<typeof IssueSchema>;
