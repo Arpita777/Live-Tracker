@@ -9,4 +9,10 @@ export const MutationSchema = z.object({
   hlc: z.string(),
 });
 
+export const PushRequestSchema = z.object({
+  mutations: z.array(MutationSchema).max(500),
+});
+
+export type PushRequest = z.infer<typeof PushRequestSchema>;
+
 export type Mutation = z.infer<typeof MutationSchema>;
