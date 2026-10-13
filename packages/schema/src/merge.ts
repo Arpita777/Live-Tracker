@@ -38,5 +38,36 @@ export function applyChanges(
   ) {
     next.updatedAt = changes.updatedAt;
   }
+
+  // createdAt never changes after creation: keep the earliest real value.
+  // 0 means "unknown yet" (the issue was built from an update that arrived early).
+  if (typeof changes.createdAt === "number" && changes.createdAt > 0) {
+    if (next.createdAt === 0 || changes.createdAt < next.createdAt) {
+      next.createdAt = changes.createdAt;
+    }
+  }
   return next;
+}
+
+// Build a brand-new issue from a "create" note's changes
+export function issueFromCreate(
+  changes: Record<string, unknown>,
+  hlc: string
+): Issue {
+  const empty = {
+    id: String(changes.id),
+    projectId: "",
+    title: "",
+    description: "",
+    status: "backlog",
+    priority: "none",
+    assigneeId: null,
+    labels: [],
+    createdAt: typeof changes.createdAt === "number" ? changes.createdAt : 0,
+    updatedAt: 0,
+    deletedAt: null,
+    clocks: {},
+  } as Issue;
+
+  return applyChanges(empty, changes, hlc);
 }
