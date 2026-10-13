@@ -40,3 +40,26 @@ export function applyChanges(
   }
   return next;
 }
+
+// Build a brand-new issue from a "create" note's changes
+export function issueFromCreate(
+  changes: Record<string, unknown>,
+  hlc: string
+): Issue {
+  const empty = {
+    id: String(changes.id),
+    projectId: "",
+    title: "",
+    description: "",
+    status: "backlog",
+    priority: "none",
+    assigneeId: null,
+    labels: [],
+    createdAt: typeof changes.createdAt === "number" ? changes.createdAt : 0,
+    updatedAt: 0,
+    deletedAt: null,
+    clocks: {},
+  } as Issue;
+
+  return applyChanges(empty, changes, hlc);
+}
