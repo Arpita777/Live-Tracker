@@ -38,6 +38,14 @@ export function applyChanges(
   ) {
     next.updatedAt = changes.updatedAt;
   }
+
+  // createdAt never changes after creation: keep the earliest real value.
+  // 0 means "unknown yet" (the issue was built from an update that arrived early).
+  if (typeof changes.createdAt === "number" && changes.createdAt > 0) {
+    if (next.createdAt === 0 || changes.createdAt < next.createdAt) {
+      next.createdAt = changes.createdAt;
+    }
+  }
   return next;
 }
 

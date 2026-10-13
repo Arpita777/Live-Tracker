@@ -93,4 +93,19 @@ describe("applyChanges", () => {
     const result = applyChanges(base, { id: "hacked" }, stamp(100));
     expect(result.id).toBe(base.id);
   });
+
+  it("fills in createdAt when the create note arrives after an update", () => {
+    const partial = { ...base, createdAt: 0, clocks: {} };
+    const result = applyChanges(partial, { createdAt: 500 }, stamp(100));
+    expect(result.createdAt).toBe(500);
+  });
+
+  it("never replaces a real createdAt with a later one", () => {
+    const result = applyChanges(
+      { ...base, createdAt: 500 },
+      { createdAt: 900 },
+      stamp(100)
+    );
+    expect(result.createdAt).toBe(500);
+  });
 });
