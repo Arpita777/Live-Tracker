@@ -4,6 +4,7 @@ import { formatHlc, type Mutation } from "@tracker/schema";
 import { db } from "../db/db";
 import { receiveMutations } from "./receive";
 import { listIssues } from "../db/issueRepo";
+import { updateIssue } from "../db/issueRepo";
 
 const id = crypto.randomUUID();
 const hlc = (wall: number) => formatHlc({ wall, counter: 0, node: "remote" });
@@ -81,5 +82,42 @@ describe("receiveMutations", () => {
     const projectId = (create.changes as { projectId: string }).projectId;
     expect(await listIssues(projectId)).toHaveLength(0);
     expect(await db.issues.get(id)).toBeDefined(); // tombstone kept
+  });
+  it("returns a conflict when a remote edit never saw our local edit", async () => {
+    await receiveMutations([create]);
+    await updateIssue(id, { title: "Local" });
+
+    const conflicts = await receiveMutations([
+      {
+        ...create,
+        id: crypto.randomUUID(),
+        type: "update",
+        hlc: hlc(Date.now() + 5000),
+        changes: { title: "Remote", _base: { title: create.hlc } },
+      },
+    ]);
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({
+      field: "title",
+      winner: { value: "Remote" },
+      loser: { value: "Local" },
+    });
+  });
+
+  it("returns no conflict for a normal follow-up edit", async () => {
+    await receiveMutations([create]);
+
+    const conflicts = await receiveMutations([
+      {
+        ...create,
+        id: crypto.randomUUID(),
+        type: "update",
+        hlc: hlc(Date.now() + 5000),
+        changes: { title: "Follow-up", _base: { title: create.hlc } },
+      },
+    ]);
+
+    expect(conflicts).toHaveLength(0);
   });
 });

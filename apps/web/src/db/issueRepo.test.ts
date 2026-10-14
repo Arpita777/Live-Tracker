@@ -157,4 +157,12 @@ describe("issueRepo", () => {
     expect(saved?.clocks.status).toBe(notes[1]!.hlc); // changed field
     expect(saved?.clocks.title).toBe(notes[0]!.hlc); // untouched field keeps the creation stamp
   });
+
+  it("records which version of each field an edit started from", async () => {
+    const issue = await createIssue({ projectId: PROJECT_ID, title: "Base" });
+    await updateIssue(issue.id, { status: "done" });
+
+    const notes = await db.outbox.orderBy("seq").toArray();
+    expect(notes[1]!.changes._base).toEqual({ status: notes[0]!.hlc });
+  });
 });

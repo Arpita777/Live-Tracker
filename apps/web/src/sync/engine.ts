@@ -4,7 +4,7 @@ import { receiveMutations } from "./receive";
 
 const CURSOR_KEY = "cursor";
 
-export type SyncResult = { pushed: number; pulled: number };
+export type SyncResult = { pushed: number; pulled: number; conflicts: number };
 
 type Options = {
   baseUrl: string;
@@ -58,9 +58,9 @@ export function createSyncEngine(options: Options) {
       pushed += seqs.length;
     }
   }
-
-  async function pullAll(): Promise<number> {
+  async function pullAll(): Promise<{ pulled: number; conflicts: number }> {
     let pulled = 0;
+    let conflicts = 0;
 
     for (;;) {
       const after = await getCursor();
@@ -71,21 +71,20 @@ export function createSyncEngine(options: Options) {
 
       const page = PullResponseSchema.parse(await res.json());
 
-      // Merge the notes AND move the cursor together, or neither
       await db.transaction("rw", db.issues, db.meta, async () => {
-        await receiveMutations(page.mutations);
+        conflicts += (await receiveMutations(page.mutations)).length;
         await db.meta.put({ key: CURSOR_KEY, value: page.cursor });
       });
 
       pulled += page.mutations.length;
-      if (!page.hasMore) return pulled;
+      if (!page.hasMore) return { pulled, conflicts };
     }
   }
 
   async function run(): Promise<SyncResult> {
     const pushed = await pushOutbox();
-    const pulled = await pullAll();
-    return { pushed, pulled };
+    const { pulled, conflicts } = await pullAll();
+    return { pushed, pulled, conflicts };
   }
 
   // Only one sync at a time: callers during a run share its result
