@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyChanges } from "./merge";
+import { applyChanges, applyChangesDetailed } from "./merge";
 import { formatHlc } from "./hlc";
 import type { Issue } from "./issue";
 
@@ -168,5 +168,108 @@ describe("deletes", () => {
 
     expect(x).toEqual(y);
     expect(x.deletedAt).toBe(5000);
+  });
+});
+describe("conflict detection", () => {
+  const start = applyChanges(base, { title: "Start" }, stamp(50, "a"));
+  const seen = stamp(50, "a");
+
+  const fromA = {
+    changes: { title: "A", _base: { title: seen } },
+    hlc: stamp(100, "A"),
+  };
+  const fromB = {
+    changes: { title: "B", _base: { title: seen } },
+    hlc: stamp(200, "B"),
+  };
+
+  it("reports two edits made without seeing each other", () => {
+    const afterA = applyChangesDetailed(start, fromA.changes, fromA.hlc);
+    expect(afterA.conflicts).toHaveLength(0); // A was first, nothing to clash with
+
+    const afterB = applyChangesDetailed(afterA.issue, fromB.changes, fromB.hlc);
+    expect(afterB.conflicts).toHaveLength(1);
+    expect(afterB.conflicts[0]).toMatchObject({
+      field: "title",
+      winner: { value: "B" },
+      loser: { value: "A" },
+    });
+  });
+
+  it("reports the same conflict whatever order the notes arrive in", () => {
+    const ab = applyChangesDetailed(
+      applyChangesDetailed(start, fromA.changes, fromA.hlc).issue,
+      fromB.changes,
+      fromB.hlc
+    );
+    const ba = applyChangesDetailed(
+      applyChangesDetailed(start, fromB.changes, fromB.hlc).issue,
+      fromA.changes,
+      fromA.hlc
+    );
+
+    expect(ab.conflicts).toEqual(ba.conflicts);
+    expect(ab.issue).toEqual(ba.issue);
+  });
+
+  it("is not a conflict when the author had seen the current value", () => {
+    const afterA = applyChanges(start, fromA.changes, fromA.hlc);
+    const followUp = {
+      title: "B after reading A",
+      _base: { title: fromA.hlc },
+    };
+    const result = applyChangesDetailed(afterA, followUp, stamp(300, "B"));
+    expect(result.conflicts).toHaveLength(0);
+    expect(result.issue.title).toBe("B after reading A");
+  });
+
+  it("is not a conflict when different fields were edited", () => {
+    const afterA = applyChanges(start, fromA.changes, fromA.hlc);
+    const result = applyChangesDetailed(
+      afterA,
+      { priority: "high", _base: {} },
+      stamp(200, "B")
+    );
+    expect(result.conflicts).toHaveLength(0);
+  });
+
+  it("is not a conflict when both devices chose the same value", () => {
+    const afterA = applyChanges(start, fromA.changes, fromA.hlc);
+    const result = applyChangesDetailed(
+      afterA,
+      { title: "A", _base: { title: seen } },
+      stamp(200, "B")
+    );
+    expect(result.conflicts).toHaveLength(0);
+  });
+
+  it("never reports a device against itself", () => {
+    const first = applyChanges(
+      start,
+      { title: "One", _base: { title: seen } },
+      stamp(100, "A")
+    );
+    const second = applyChanges(
+      first,
+      { title: "Two", _base: { title: stamp(100, "A") } },
+      stamp(150, "A")
+    );
+    // the first note echoes back after the second was applied
+    const echo = applyChangesDetailed(
+      second,
+      { title: "One", _base: { title: seen } },
+      stamp(100, "A")
+    );
+    expect(echo.conflicts).toHaveLength(0);
+  });
+
+  it("cannot judge notes without _base, so reports nothing", () => {
+    const afterA = applyChanges(start, fromA.changes, fromA.hlc);
+    const result = applyChangesDetailed(
+      afterA,
+      { title: "No base" },
+      stamp(200, "B")
+    );
+    expect(result.conflicts).toHaveLength(0);
   });
 });

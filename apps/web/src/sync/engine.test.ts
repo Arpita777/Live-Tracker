@@ -130,7 +130,6 @@ describe("sync engine", () => {
   it("a second sync with nothing new does nothing", async () => {
     await createIssue({ projectId: PROJECT_ID, title: "Once" });
     await engine.syncNow();
-
     expect(await engine.syncNow()).toEqual({
       pushed: 0,
       pulled: 0,

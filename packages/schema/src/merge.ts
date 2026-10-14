@@ -70,8 +70,6 @@ export function applyChangesDetailed(
     Object.assign(next, { [field]: incoming });
     next.clocks[field] = hlc;
   }
-
-  // updatedAt is only for display, so just keep the latest
   if (
     typeof changes.updatedAt === "number" &&
     changes.updatedAt > next.updatedAt
@@ -79,8 +77,6 @@ export function applyChangesDetailed(
     next.updatedAt = changes.updatedAt;
   }
 
-  // createdAt never changes after creation: keep the earliest real value.
-  // 0 means "unknown yet" (the issue was built from an update that arrived early).
   if (typeof changes.createdAt === "number" && changes.createdAt > 0) {
     if (next.createdAt === 0 || changes.createdAt < next.createdAt) {
       next.createdAt = changes.createdAt;

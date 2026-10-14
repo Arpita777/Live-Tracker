@@ -59,7 +59,6 @@ export function createSyncEngine(options: Options) {
       pushed += seqs.length;
     }
   }
-
   async function pullAll(): Promise<{ pulled: number; conflicts: number }> {
     let pulled = 0;
     let conflicts = 0;
@@ -74,8 +73,7 @@ export function createSyncEngine(options: Options) {
 
       const page = PullResponseSchema.parse(await res.json());
 
-      // Merge the notes, log conflicts AND move the cursor together, or none of it
-      await db.transaction("rw", db.issues, db.meta, db.conflicts, async () => {
+      await db.transaction("rw", db.issues, db.meta, async () => {
         conflicts += (await receiveMutations(page.mutations)).length;
         await db.meta.put({ key: CURSOR_KEY, value: page.cursor });
       });
