@@ -1,6 +1,0 @@
-{
-  "installCommand": "corepack enable && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter web build",
-  "outputDirectory": "apps/web/dist",
-  "framework": null
-}
