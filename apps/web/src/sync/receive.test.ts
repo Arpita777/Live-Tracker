@@ -4,8 +4,6 @@ import { formatHlc, type Mutation } from "@tracker/schema";
 import { db } from "../db/db";
 import { listIssues, updateIssue } from "../db/issueRepo";
 import { receiveMutations } from "./receive";
-import { listIssues } from "../db/issueRepo";
-import { updateIssue } from "../db/issueRepo";
 
 const id = crypto.randomUUID();
 const hlc = (wall: number) => formatHlc({ wall, counter: 0, node: "remote" });
