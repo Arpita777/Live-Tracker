@@ -17,6 +17,7 @@ import {
   type Command,
 } from "./features/command-palette/CommandPalette";
 import "./app.css";
+import { sync } from "./sync/syncClient";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -30,6 +31,10 @@ export default function App() {
   // filters    = what the board uses (can wait a moment)
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [syncState, setSyncState] = useState<"idle" | "syncing" | "error">(
+    "idle"
+  );
+  const [syncMessage, setSyncMessage] = useState("");
   const [isPending, startTransition] = useTransition();
   const pendingCount = useLiveQuery(() => db.outbox.count(), [], 0);
 
@@ -58,6 +63,18 @@ export default function App() {
     () => filterIssues(issues ?? [], filters),
     [issues, filters]
   );
+
+  async function handleSync() {
+    setSyncState("syncing");
+    try {
+      const result = await sync.syncNow();
+      setSyncState("idle");
+      setSyncMessage(`Sent ${result.pushed} · fetched ${result.pulled}`);
+    } catch (error) {
+      setSyncState("error");
+      setSyncMessage(error instanceof Error ? error.message : "Sync failed");
+    }
+  }
 
   function handleSearchChange(value: string) {
     setSearchText(value); // urgent: the box updates right away
@@ -116,6 +133,10 @@ export default function App() {
         </div>
         <span className="hint">Cmd+K for commands</span>
         <span className="hint">{pendingCount} pending changes</span>
+        <button onClick={handleSync} disabled={syncState === "syncing"}>
+          {syncState === "syncing" ? "Syncing..." : "Sync now"}
+        </button>
+        <span className="hint">{syncMessage}</span>
       </header>
 
       {import.meta.env.DEV && (
