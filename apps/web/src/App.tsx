@@ -14,6 +14,7 @@ import {
   type Filters,
 } from "./features/board/filterIssues";
 import { IssuePanel } from "./features/issues/IssuePanel";
+import { ConflictPanel } from "./features/conflicts/ConflictPanel";
 import {
   CommandPalette,
   type Command,
@@ -25,13 +26,13 @@ const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 export default function App() {
   const [title, setTitle] = useState("");
 
-  // searchText = what's in the box (urgent), filters = what the board uses (can wait)
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [isPending, startTransition] = useTransition();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [conflictsOpen, setConflictsOpen] = useState(false);
 
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "error">(
     "idle"
@@ -56,7 +57,6 @@ export default function App() {
     [issues, filters]
   );
 
-  // Cmd+K / Ctrl+K toggles the command palette
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -69,9 +69,9 @@ export default function App() {
   }, []);
 
   function handleSearchChange(value: string) {
-    setSearchText(value); // urgent: the box updates right away
+    setSearchText(value);
     startTransition(() => {
-      setFilters((f) => ({ ...f, search: value })); // can wait
+      setFilters((f) => ({ ...f, search: value }));
     });
   }
 
@@ -109,12 +109,15 @@ export default function App() {
 
   const hasFilters = filters.search !== "" || filters.priority !== "all";
   const total = issues?.length ?? 0;
-
-  // Look up from ALL issues (not the filtered ones), so a filter never closes the panel
   const selectedIssue = issues?.find((i) => i.id === selectedId) ?? null;
 
   const commands: Command[] = [
     { id: "clear", label: "Clear filters", run: handleClear },
+    {
+      id: "conflicts",
+      label: "Open conflicts",
+      run: () => setConflictsOpen(true),
+    },
     ...IssuePriority.options.map((p) => ({
       id: `priority-${p}`,
       label: `Filter priority: ${p}`,
@@ -151,9 +154,12 @@ export default function App() {
         </span>
         <span className="hint">{pendingCount} pending changes</span>
         {openConflicts > 0 && (
-          <span className="hint" style={{ color: "var(--danger)" }}>
-            {openConflicts} conflict(s) logged
-          </span>
+          <button
+            onClick={() => setConflictsOpen(true)}
+            style={{ color: "var(--danger)" }}
+          >
+            {openConflicts} conflict(s)
+          </button>
         )}
         <span className="hint">Cmd+K for commands</span>
       </header>
@@ -195,6 +201,10 @@ export default function App() {
           issue={selectedIssue}
           onClose={() => setSelectedId(null)}
         />
+      )}
+
+      {conflictsOpen && (
+        <ConflictPanel onClose={() => setConflictsOpen(false)} />
       )}
 
       {paletteOpen && (
