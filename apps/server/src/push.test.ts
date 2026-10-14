@@ -133,4 +133,36 @@ describe("POST /push", () => {
     const res = await app.request("/push", { method: "POST", body: "nope" });
     expect(res.status).toBe(400);
   });
+
+  it("keeps a deleted issue as a tombstone and still delivers the delete", async () => {
+    const del = note({
+      type: "update",
+      hlc: hlc(200),
+      changes: { deletedAt: 5000 },
+    });
+    await push([create, del]);
+
+    expect(savedIssue().deletedAt).toBe(5000); // the row is still there
+
+    const pulled = await (await app.request("/pull")).json();
+    expect(pulled.mutations).toHaveLength(2); // other devices will receive the delete
+  });
+
+  it("an edit that arrives after a delete does not bring the issue back", async () => {
+    const del = note({
+      type: "update",
+      hlc: hlc(200, "laptop"),
+      changes: { deletedAt: 5000 },
+    });
+    const edit = note({
+      type: "update",
+      hlc: hlc(300, "phone"),
+      changes: { title: "Late edit" },
+    });
+
+    await push([create, del]);
+    await push([edit]);
+
+    expect(savedIssue()).toMatchObject({ deletedAt: 5000, title: "Late edit" });
+  });
 });
