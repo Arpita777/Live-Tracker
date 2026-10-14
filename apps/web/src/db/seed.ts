@@ -35,6 +35,7 @@ const PRIORITIES: Issue["priority"][] = [
 const pick = <T>(list: T[]): T =>
   list[Math.floor(Math.random() * list.length)]!;
 
+// Seeded issues skip the outbox on purpose: they are fake dev data and never sync
 export async function seedIssues(
   projectId: string,
   count = 10_000
@@ -50,7 +51,7 @@ export async function seedIssues(
     priority: pick(PRIORITIES),
     assigneeId: null,
     labels: [],
-    createdAt: now + i, // slightly different times so the order is stable
+    createdAt: now + i,
     updatedAt: now + i,
     deletedAt: null,
     clocks: {},
@@ -58,10 +59,19 @@ export async function seedIssues(
 
   await db.issues.bulkAdd(issues);
 }
+
 export async function clearIssues(): Promise<void> {
-  await db.transaction("rw", db.issues, db.outbox, db.meta, async () => {
-    await db.issues.clear();
-    await db.outbox.clear();
-    await db.meta.clear();
-  });
+  await db.transaction(
+    "rw",
+    db.issues,
+    db.outbox,
+    db.meta,
+    db.conflicts,
+    async () => {
+      await db.issues.clear();
+      await db.outbox.clear();
+      await db.meta.clear();
+      await db.conflicts.clear();
+    }
+  );
 }

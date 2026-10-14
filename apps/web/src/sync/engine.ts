@@ -4,7 +4,7 @@ import { receiveMutations } from "./receive";
 
 const CURSOR_KEY = "cursor";
 
-export type SyncResult = { pushed: number; pulled: number };
+export type SyncResult = { pushed: number; pulled: number; conflicts: number };
 
 type Options = {
   baseUrl: string;
@@ -44,7 +44,8 @@ export function createSyncEngine(options: Options) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ mutations }),
       });
-      if (!res.ok) throw new Error(`Push failed (${res.status})`);
+      if (!res.ok)
+        throw new Error(`Push failed (${res.status}): ${await res.text()}`);
 
       const body = (await res.json()) as { accepted?: string[] };
       const accepted = new Set(body.accepted ?? []);
@@ -59,33 +60,35 @@ export function createSyncEngine(options: Options) {
     }
   }
 
-  async function pullAll(): Promise<number> {
+  async function pullAll(): Promise<{ pulled: number; conflicts: number }> {
     let pulled = 0;
+    let conflicts = 0;
 
     for (;;) {
       const after = await getCursor();
       const res = await fetchFn(
         `${baseUrl}/pull?after=${after}&limit=${pullLimit}`
       );
-      if (!res.ok) throw new Error(`Pull failed (${res.status})`);
+      if (!res.ok)
+        throw new Error(`Pull failed (${res.status}): ${await res.text()}`);
 
       const page = PullResponseSchema.parse(await res.json());
 
-      // Merge the notes AND move the cursor together, or neither
-      await db.transaction("rw", db.issues, db.meta, async () => {
-        await receiveMutations(page.mutations);
+      // Merge the notes, log conflicts AND move the cursor together, or none of it
+      await db.transaction("rw", db.issues, db.meta, db.conflicts, async () => {
+        conflicts += (await receiveMutations(page.mutations)).length;
         await db.meta.put({ key: CURSOR_KEY, value: page.cursor });
       });
 
       pulled += page.mutations.length;
-      if (!page.hasMore) return pulled;
+      if (!page.hasMore) return { pulled, conflicts };
     }
   }
 
   async function run(): Promise<SyncResult> {
     const pushed = await pushOutbox();
-    const pulled = await pullAll();
-    return { pushed, pulled };
+    const { pulled, conflicts } = await pullAll();
+    return { pushed, pulled, conflicts };
   }
 
   // Only one sync at a time: callers during a run share its result
