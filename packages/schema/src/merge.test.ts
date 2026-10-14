@@ -109,3 +109,64 @@ describe("applyChanges", () => {
     expect(result.createdAt).toBe(500);
   });
 });
+
+describe("deletes", () => {
+  it("a delete is just a change to deletedAt", () => {
+    const result = applyChanges(base, { deletedAt: 5000 }, stamp(100));
+    expect(result.deletedAt).toBe(5000);
+  });
+
+  it("an edit to another field after a delete keeps the issue deleted", () => {
+    const deleted = applyChanges(
+      base,
+      { deletedAt: 5000 },
+      stamp(100, "laptop")
+    );
+    const edited = applyChanges(
+      deleted,
+      { title: "Edited late" },
+      stamp(200, "phone")
+    );
+
+    expect(edited.deletedAt).toBe(5000);
+    expect(edited.title).toBe("Edited late");
+  });
+
+  it("delete and restore: the newer one wins, in any order", () => {
+    const del = { changes: { deletedAt: 5000 }, hlc: stamp(100, "a") };
+    const restore = { changes: { deletedAt: null }, hlc: stamp(200, "b") };
+
+    const x = applyChanges(
+      applyChanges(base, del.changes, del.hlc),
+      restore.changes,
+      restore.hlc
+    );
+    const y = applyChanges(
+      applyChanges(base, restore.changes, restore.hlc),
+      del.changes,
+      del.hlc
+    );
+
+    expect(x).toEqual(y);
+    expect(x.deletedAt).toBeNull();
+  });
+
+  it("a delete newer than a restore stays deleted, in any order", () => {
+    const restore = { changes: { deletedAt: null }, hlc: stamp(100, "a") };
+    const del = { changes: { deletedAt: 5000 }, hlc: stamp(200, "b") };
+
+    const x = applyChanges(
+      applyChanges(base, restore.changes, restore.hlc),
+      del.changes,
+      del.hlc
+    );
+    const y = applyChanges(
+      applyChanges(base, del.changes, del.hlc),
+      restore.changes,
+      restore.hlc
+    );
+
+    expect(x).toEqual(y);
+    expect(x.deletedAt).toBe(5000);
+  });
+});
