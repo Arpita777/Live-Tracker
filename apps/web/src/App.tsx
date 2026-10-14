@@ -56,18 +56,13 @@ export default function App() {
     [issues, filters]
   );
 
-  async function handleSync() {
-    setSyncState("syncing");
-    try {
-      const result = await sync.syncNow();
-      setSyncState("idle");
-      setSyncMessage(
-        `Sent ${result.pushed} · fetched ${result.pulled}` +
-          (result.conflicts > 0 ? ` · ${result.conflicts} conflict(s)` : "")
-      );
-    } catch (error) {
-      setSyncState("error");
-      setSyncMessage(error instanceof Error ? error.message : "Sync failed");
+  // Cmd+K / Ctrl+K toggles the command palette
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
