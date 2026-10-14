@@ -1,0 +1,56 @@
+.conflict-panel {
+  width: 400px;
+}
+
+.conflict-help,
+.conflict-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.conflict-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.conflict-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.conflict-side {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border-left: 3px solid var(--muted);
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.conflict-side.kept {
+  border-left-color: #3fb950;
+}
+
+.conflict-side.lost {
+  border-left-color: var(--danger);
+}
+
+.conflict-value {
+  margin: 2px 0;
+  word-break: break-word;
+}
+
+.conflict-side small {
+  color: var(--muted);
+}
+
+.conflict-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

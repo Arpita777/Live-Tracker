@@ -1,5 +1,10 @@
-import type { FieldConflict } from "@tracker/schema";
+import {
+  MERGEABLE_FIELDS,
+  type FieldConflict,
+  type Issue,
+} from "@tracker/schema";
 import { db } from "./db";
+import { updateIssue } from "./issueRepo";
 
 export function conflictKey(c: FieldConflict): string {
   return `${c.issueId}:${c.field}:${c.winner.hlc}:${c.loser.hlc}`;
@@ -33,4 +38,18 @@ export function dismissAllConflicts(): Promise<number> {
 
 export function countOpenConflicts(): Promise<number> {
   return db.conflicts.where("status").equals("open").count();
+}
+
+// Put the overwritten value back as a NEW edit (new clock, so it wins and syncs)
+export async function restoreConflict(key: string): Promise<void> {
+  const row = await db.conflicts.get(key);
+  if (!row) return;
+
+  const mergeable = (MERGEABLE_FIELDS as readonly string[]).includes(row.field);
+  if (mergeable) {
+    await updateIssue(row.issueId, {
+      [row.field]: row.loser.value,
+    } as Partial<Issue>);
+  }
+  await dismissConflict(key);
 }
