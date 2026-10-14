@@ -69,7 +69,10 @@ export default function App() {
     try {
       const result = await sync.syncNow();
       setSyncState("idle");
-      setSyncMessage(`Sent ${result.pushed} · fetched ${result.pulled}`);
+      setSyncMessage(
+        `Sent ${result.pushed} · fetched ${result.pulled}` +
+          (result.conflicts > 0 ? ` · ${result.conflicts} conflict(s)` : "")
+      );
     } catch (error) {
       setSyncState("error");
       setSyncMessage(error instanceof Error ? error.message : "Sync failed");

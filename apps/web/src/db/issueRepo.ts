@@ -70,10 +70,17 @@ export async function updateIssue(
 
   await db.transaction("rw", db.issues, db.outbox, async () => {
     const existing = await db.issues.get(id);
-    if (!existing) return; // no such issue, so nothing to send
+    if (!existing) return;
+
+    // The version of each field this edit started from
+    const base: Record<string, string> = {};
+    for (const field of Object.keys(changes)) {
+      const seen = existing.clocks?.[field];
+      if (seen) base[field] = seen;
+    }
 
     await db.issues.put(applyChanges(existing, fullChanges, hlc));
-    await enqueue(id, "update", fullChanges, hlc);
+    await enqueue(id, "update", { ...fullChanges, _base: base }, hlc);
   });
 }
 
