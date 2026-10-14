@@ -44,7 +44,8 @@ export function createSyncEngine(options: Options) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ mutations }),
       });
-      if (!res.ok) throw new Error(`Push failed (${res.status})`);
+      if (!res.ok)
+        throw new Error(`Push failed (${res.status}): ${await res.text()}`);
 
       const body = (await res.json()) as { accepted?: string[] };
       const accepted = new Set(body.accepted ?? []);
@@ -58,6 +59,7 @@ export function createSyncEngine(options: Options) {
       pushed += seqs.length;
     }
   }
+
   async function pullAll(): Promise<{ pulled: number; conflicts: number }> {
     let pulled = 0;
     let conflicts = 0;
@@ -67,11 +69,13 @@ export function createSyncEngine(options: Options) {
       const res = await fetchFn(
         `${baseUrl}/pull?after=${after}&limit=${pullLimit}`
       );
-      if (!res.ok) throw new Error(`Pull failed (${res.status})`);
+      if (!res.ok)
+        throw new Error(`Pull failed (${res.status}): ${await res.text()}`);
 
       const page = PullResponseSchema.parse(await res.json());
 
-      await db.transaction("rw", db.issues, db.meta, async () => {
+      // Merge the notes, log conflicts AND move the cursor together, or none of it
+      await db.transaction("rw", db.issues, db.meta, db.conflicts, async () => {
         conflicts += (await receiveMutations(page.mutations)).length;
         await db.meta.put({ key: CURSOR_KEY, value: page.cursor });
       });

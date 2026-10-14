@@ -84,6 +84,7 @@ describe("sync engine", () => {
     await db.issues.clear();
     await db.outbox.clear();
     await db.meta.clear();
+    await db.conflicts.clear();
     server = makeFakeServer();
     engine = createSyncEngine({
       baseUrl: "http://test",
@@ -123,11 +124,13 @@ describe("sync engine", () => {
     await engine.syncNow(); // pushes, then pulls our own notes back
 
     expect(await db.issues.get(issue.id)).toEqual(before);
+    expect(await db.conflicts.count()).toBe(0); // our own echo is never a conflict
   });
 
   it("a second sync with nothing new does nothing", async () => {
     await createIssue({ projectId: PROJECT_ID, title: "Once" });
     await engine.syncNow();
+
     expect(await engine.syncNow()).toEqual({
       pushed: 0,
       pulled: 0,

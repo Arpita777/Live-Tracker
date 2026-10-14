@@ -1,7 +1,11 @@
-import { useMemo, useState, useTransition, useEffect } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { IssuePriority } from "@tracker/schema";
 import { db } from "./db/db";
 import { createIssue } from "./db/issueRepo";
+import { countOpenConflicts } from "./db/conflictRepo";
+import { clearIssues, seedIssues } from "./db/seed";
+import { sync } from "./sync/syncClient";
 import { Board } from "./features/board/Board";
 import { FilterBar } from "./features/board/FilterBar";
 import {
@@ -10,44 +14,29 @@ import {
   type Filters,
 } from "./features/board/filterIssues";
 import { IssuePanel } from "./features/issues/IssuePanel";
-import { clearIssues, seedIssues } from "./db/seed";
-import { IssuePriority } from "@tracker/schema";
 import {
   CommandPalette,
   type Command,
 } from "./features/command-palette/CommandPalette";
 import "./app.css";
-import { sync } from "./sync/syncClient";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 
 export default function App() {
   const [title, setTitle] = useState("");
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Two copies of the search text:
-  // searchText = what's in the box (urgent, must update instantly)
-  // filters    = what the board uses (can wait a moment)
+  // searchText = what's in the box (urgent), filters = what the board uses (can wait)
   const [searchText, setSearchText] = useState("");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [isPending, startTransition] = useTransition();
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "error">(
     "idle"
   );
   const [syncMessage, setSyncMessage] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const pendingCount = useLiveQuery(() => db.outbox.count(), [], 0);
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault(); // stop the browser's own Cmd+K
-        setPaletteOpen((open) => !open);
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
 
   const issues = useLiveQuery(
     () =>
@@ -59,25 +48,25 @@ export default function App() {
     []
   );
 
+  const pendingCount = useLiveQuery(() => db.outbox.count(), [], 0);
+  const openConflicts = useLiveQuery(() => countOpenConflicts(), [], 0);
+
   const visibleIssues = useMemo(
     () => filterIssues(issues ?? [], filters),
     [issues, filters]
   );
 
-  async function handleSync() {
-    setSyncState("syncing");
-    try {
-      const result = await sync.syncNow();
-      setSyncState("idle");
-      setSyncMessage(
-        `Sent ${result.pushed} · fetched ${result.pulled}` +
-          (result.conflicts > 0 ? ` · ${result.conflicts} conflict(s)` : "")
-      );
-    } catch (error) {
-      setSyncState("error");
-      setSyncMessage(error instanceof Error ? error.message : "Sync failed");
+  // Cmd+K / Ctrl+K toggles the command palette
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
     }
-  }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   function handleSearchChange(value: string) {
     setSearchText(value); // urgent: the box updates right away
@@ -103,6 +92,21 @@ export default function App() {
     setTitle("");
   }
 
+  async function handleSync() {
+    setSyncState("syncing");
+    try {
+      const result = await sync.syncNow();
+      setSyncState("idle");
+      setSyncMessage(
+        `Sent ${result.pushed} · fetched ${result.pulled}` +
+          (result.conflicts > 0 ? ` · ${result.conflicts} conflict(s)` : "")
+      );
+    } catch (error) {
+      setSyncState("error");
+      setSyncMessage(error instanceof Error ? error.message : "Sync failed");
+    }
+  }
+
   const hasFilters = filters.search !== "" || filters.priority !== "all";
   const total = issues?.length ?? 0;
 
@@ -122,6 +126,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>Tracker</h1>
+
         <div className="add-form">
           <input
             value={title}
@@ -134,12 +139,23 @@ export default function App() {
             Add issue
           </button>
         </div>
-        <span className="hint">Cmd+K for commands</span>
-        <span className="hint">{pendingCount} pending changes</span>
+
         <button onClick={handleSync} disabled={syncState === "syncing"}>
           {syncState === "syncing" ? "Syncing..." : "Sync now"}
         </button>
-        <span className="hint">{syncMessage}</span>
+        <span
+          className="hint"
+          style={syncState === "error" ? { color: "var(--danger)" } : undefined}
+        >
+          {syncMessage}
+        </span>
+        <span className="hint">{pendingCount} pending changes</span>
+        {openConflicts > 0 && (
+          <span className="hint" style={{ color: "var(--danger)" }}>
+            {openConflicts} conflict(s) logged
+          </span>
+        )}
+        <span className="hint">Cmd+K for commands</span>
       </header>
 
       {import.meta.env.DEV && (
