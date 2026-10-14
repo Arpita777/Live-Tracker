@@ -6,16 +6,17 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "start": "tsx src/index.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.4",
     "@tracker/schema": "workspace:*",
-    "hono": "^4.13.13"
+    "hono": "^4.13.13",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.4"
   }
