@@ -9,13 +9,13 @@ export const MutationSchema = z.object({
   hlc: z.string(),
 });
 
+export type Mutation = z.infer<typeof MutationSchema>;
+
 export const PushRequestSchema = z.object({
   mutations: z.array(MutationSchema).max(500),
 });
 
 export type PushRequest = z.infer<typeof PushRequestSchema>;
-
-export type Mutation = z.infer<typeof MutationSchema>;
 
 export const PullQuerySchema = z.object({
   after: z.coerce.number().int().min(0).default(0),
@@ -26,6 +26,7 @@ export const PullResponseSchema = z.object({
   mutations: z.array(MutationSchema),
   cursor: z.number().int(),
   hasMore: z.boolean(),
+  epoch: z.string(), // identifies this server database; changes if it is wiped
 });
 
 export type PullResponse = z.infer<typeof PullResponseSchema>;

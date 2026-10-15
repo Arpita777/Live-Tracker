@@ -25,7 +25,32 @@ export function openDb(path = "tracker.db"): Db {
       id   TEXT PRIMARY KEY,
       data TEXT NOT NULL
     );
+
+    -- Small key/value store (holds the epoch).
+    CREATE TABLE IF NOT EXISTS meta (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 
   return db;
+}
+
+// The id of this database. Created once, so a wiped database gets a new one.
+export function getEpoch(db: Db): string {
+  const row = db
+    .prepare("SELECT value FROM meta WHERE key = 'epoch'")
+    .get() as unknown as { value: string } | undefined;
+  if (row) return row.value;
+
+  const epoch = crypto.randomUUID();
+  db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('epoch', ?)").run(
+    epoch
+  );
+  const saved = db
+    .prepare("SELECT value FROM meta WHERE key = 'epoch'")
+    .get() as unknown as {
+    value: string;
+  };
+  return saved.value;
 }

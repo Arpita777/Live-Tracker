@@ -16,6 +16,7 @@ function makeFakeServer() {
   const log: Mutation[] = [];
   const calls = { push: 0, pull: 0 };
   let offline = false;
+  let epoch = "epoch-A";
 
   const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (offline) throw new TypeError("Failed to fetch");
@@ -42,12 +43,23 @@ function makeFakeServer() {
         mutations: page,
         cursor: after + page.length,
         hasMore: rows.length > limit,
+        epoch,
       });
     }
     return new Response("not found", { status: 404 });
   }) as typeof fetch;
 
-  return { log, calls, fetchFn, setOffline: (v: boolean) => (offline = v) };
+  return {
+    log,
+    calls,
+    fetchFn,
+    setOffline: (v: boolean) => (offline = v),
+    // Simulates the server database being wiped and recreated
+    wipe: (newEpoch: string) => {
+      log.length = 0;
+      epoch = newEpoch;
+    },
+  };
 }
 
 function remoteCreate(title: string, wall = Date.now() + 1000): Mutation {
@@ -170,5 +182,47 @@ describe("sync engine", () => {
     await Promise.all([engine.syncNow(), engine.syncNow()]);
 
     expect(server.calls.push).toBe(1);
+  });
+
+  it("remembers the server epoch on the first sync without resetting", async () => {
+    await createIssue({ projectId: PROJECT_ID, title: "First" });
+    await engine.syncNow();
+
+    expect((await db.meta.get("epoch"))?.value).toBe("epoch-A");
+    expect(server.log).toHaveLength(1); // no extra copies were sent
+  });
+
+  it("re-sends local issues when the server database was wiped", async () => {
+    const issue = await createIssue({
+      projectId: PROJECT_ID,
+      title: "Survivor",
+    });
+    await engine.syncNow();
+    expect(server.log).toHaveLength(1);
+
+    server.wipe("epoch-B"); // the server forgot everything
+    await engine.syncNow();
+
+    expect(server.log.length).toBeGreaterThanOrEqual(1); // our copy is back on the server
+    expect(await db.outbox.count()).toBe(0);
+    expect((await db.meta.get("epoch"))?.value).toBe("epoch-B");
+    expect((await db.issues.get(issue.id))?.title).toBe("Survivor");
+  });
+
+  it("a second device gets the data back after a wipe", async () => {
+    await createIssue({ projectId: PROJECT_ID, title: "Shared" });
+    await engine.syncNow();
+
+    server.wipe("epoch-B");
+    await engine.syncNow(); // device 1 restores the server
+
+    // simulate device 2: a fresh database that syncs against the restored server
+    await db.issues.clear();
+    await db.outbox.clear();
+    await db.meta.clear();
+    await engine.syncNow();
+
+    const titles = (await db.issues.toArray()).map((i) => i.title);
+    expect(titles).toContain("Shared");
   });
 });
