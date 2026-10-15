@@ -43,7 +43,7 @@ describe("GET /pull", () => {
 
   it("returns nothing and a zero cursor on an empty server", async () => {
     const { body } = await pull();
-    expect(body).toEqual({ mutations: [], cursor: 0, hasMore: false });
+    expect(body).toMatchObject({ mutations: [], cursor: 0, hasMore: false });
   });
 
   it("returns pushed notes in the order the server received them", async () => {
@@ -72,7 +72,7 @@ describe("GET /pull", () => {
   it("keeps the cursor in place when nothing is new", async () => {
     await push([update(issue, 100, { title: "A" })]);
     const { body } = await pull("?after=1");
-    expect(body).toEqual({ mutations: [], cursor: 1, hasMore: false });
+    expect(body).toMatchObject({ mutations: [], cursor: 1, hasMore: false });
   });
 
   it("pages through a long list with limit and hasMore", async () => {
@@ -109,5 +109,22 @@ describe("GET /pull", () => {
     expect((await pull("?after=abc")).status).toBe(400);
     expect((await pull("?limit=0")).status).toBe(400);
     expect((await pull("?limit=9999")).status).toBe(400);
+  });
+
+  it("sends the same epoch every time for one database", async () => {
+    const first = (await pull()).body.epoch;
+    await push([update(issue, 100, { title: "A" })]);
+    const second = (await pull()).body.epoch;
+
+    expect(typeof first).toBe("string");
+    expect(second).toBe(first);
+  });
+
+  it("gives a wiped (new) database a different epoch", async () => {
+    const before = (await pull()).body.epoch;
+    app = createApp(openDb(":memory:")); // a brand-new database
+    const after = (await pull()).body.epoch;
+
+    expect(after).not.toBe(before);
   });
 });

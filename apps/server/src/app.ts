@@ -1,39 +1,30 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { formatHlc } from "@tracker/schema";
-import type { Db } from "./db";
-import { pushMutations } from "./push";
-import { PullQuerySchema, PushRequestSchema } from "@tracker/schema";
+import { PullQuerySchema, PushRequestSchema, formatHlc } from "@tracker/schema";
+import { getEpoch, type Db } from "./db";
 import { pullMutations } from "./pull";
+import { pushMutations } from "./push";
 
 // The app is built from a db we pass in, so tests can give it an in-memory one
 export function createApp(db: Db) {
   const app = new Hono();
 
-  app.use("*", cors()); // the web app runs on a different port
+  app.use("*", cors()); // the web app runs on a different origin
+
+  app.get("/", (c) => c.text("Tracker sync server is running. Try /health"));
 
   app.get("/health", (c) => {
-    const row = db.prepare("SELECT COUNT(*) AS n FROM mutations").get() as {
+    const row = db
+      .prepare("SELECT COUNT(*) AS n FROM mutations")
+      .get() as unknown as {
       n: number;
     };
     return c.json({
       ok: true,
       mutations: row.n,
-      // proves the shared package is linked
+      epoch: getEpoch(db),
       sampleHlc: formatHlc({ wall: Date.now(), counter: 0, node: "server" }),
     });
-  });
-
-  app.get("/pull", (c) => {
-    const parsed = PullQuerySchema.safeParse(c.req.query());
-    if (!parsed.success) {
-      return c.json(
-        { error: "Invalid query", issues: parsed.error.issues },
-        400
-      );
-    }
-    const { after, limit } = parsed.data;
-    return c.json(pullMutations(db, after, limit));
   });
 
   app.post("/push", async (c) => {
@@ -53,6 +44,18 @@ export function createApp(db: Db) {
     }
 
     return c.json(pushMutations(db, parsed.data.mutations));
+  });
+
+  app.get("/pull", (c) => {
+    const parsed = PullQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid query", issues: parsed.error.issues },
+        400
+      );
+    }
+    const { after, limit } = parsed.data;
+    return c.json({ ...pullMutations(db, after, limit), epoch: getEpoch(db) });
   });
 
   return app;
