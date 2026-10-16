@@ -6,6 +6,8 @@ import { createIssue } from "./db/issueRepo";
 import { countOpenConflicts } from "./db/conflictRepo";
 import { clearIssues, seedIssues } from "./db/seed";
 import { sync } from "./sync/syncClient";
+import { startAutoSync, triggerSync } from "./sync/autoSync";
+import { useSyncStatus } from "./sync/useSyncStatus";
 import { Board } from "./features/board/Board";
 import { FilterBar } from "./features/board/FilterBar";
 import {
@@ -34,10 +36,7 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [conflictsOpen, setConflictsOpen] = useState(false);
 
-  const [syncState, setSyncState] = useState<"idle" | "syncing" | "error">(
-    "idle"
-  );
-  const [syncMessage, setSyncMessage] = useState("");
+  const syncStatus = useSyncStatus();
 
   const issues = useLiveQuery(
     () =>
@@ -56,6 +55,9 @@ export default function App() {
     () => filterIssues(issues ?? [], filters),
     [issues, filters]
   );
+
+  // Start automatic sync once, stop it when the app unmounts
+  useEffect(() => startAutoSync(sync), []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -92,21 +94,36 @@ export default function App() {
     setTitle("");
   }
 
-  async function handleSync() {
-    setSyncState("syncing");
-    try {
-      const result = await sync.syncNow();
-      setSyncState("idle");
-      setSyncMessage(
-        `Sent ${result.pushed} · fetched ${result.pulled}` +
-          (result.conflicts > 0 ? ` · ${result.conflicts} conflict(s)` : "")
-      );
-    } catch (error) {
-      setSyncState("error");
-      setSyncMessage(error instanceof Error ? error.message : "Sync failed");
+  function statusLabel(): { text: string; color: string } {
+    switch (syncStatus.phase) {
+      case "syncing":
+        return syncStatus.lastSyncedAt === null
+          ? {
+              text: "Connecting to server (may take a minute on the free plan)...",
+              color: "var(--muted)",
+            }
+          : { text: "Syncing...", color: "var(--muted)" };
+      case "offline":
+        return {
+          text: "Offline: changes are saved on this device",
+          color: "var(--muted)",
+        };
+      case "error":
+        return {
+          text: "Can't reach server, retrying. Changes are saved locally.",
+          color: "var(--danger)",
+        };
+      default:
+        return pendingCount > 0
+          ? {
+              text: `${pendingCount} change(s) waiting to sync`,
+              color: "var(--muted)",
+            }
+          : { text: "All changes synced", color: "#3fb950" };
     }
   }
 
+  const label = statusLabel();
   const hasFilters = filters.search !== "" || filters.priority !== "all";
   const total = issues?.length ?? 0;
   const selectedIssue = issues?.find((i) => i.id === selectedId) ?? null;
@@ -118,6 +135,7 @@ export default function App() {
       label: "Open conflicts",
       run: () => setConflictsOpen(true),
     },
+    { id: "sync", label: "Sync now", run: triggerSync },
     ...IssuePriority.options.map((p) => ({
       id: `priority-${p}`,
       label: `Filter priority: ${p}`,
@@ -143,16 +161,21 @@ export default function App() {
           </button>
         </div>
 
-        <button onClick={handleSync} disabled={syncState === "syncing"}>
-          {syncState === "syncing" ? "Syncing..." : "Sync now"}
-        </button>
         <span
           className="hint"
-          style={syncState === "error" ? { color: "var(--danger)" } : undefined}
+          role="status"
+          aria-live="polite"
+          style={{ color: label.color }}
         >
-          {syncMessage}
+          {label.text}
         </span>
-        <span className="hint">{pendingCount} pending changes</span>
+        <button
+          onClick={triggerSync}
+          disabled={syncStatus.phase === "syncing"}
+          title="Sync now"
+        >
+          Sync now
+        </button>
         {openConflicts > 0 && (
           <button
             onClick={() => setConflictsOpen(true)}
