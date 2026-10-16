@@ -26,6 +26,8 @@ import "./app.css";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 
+const SHORTCUT = /Mac|iPhone|iPad/i.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
+
 export default function App() {
   const [title, setTitle] = useState("");
 
@@ -105,39 +107,46 @@ export default function App() {
     }
   }
 
-  function statusLabel(): { text: string; color: string } {
+  function pill(): { text: string; detail: string; tone: string } {
     switch (syncStatus.phase) {
       case "syncing":
         return syncStatus.lastSyncedAt === null
           ? {
-              text: "Connecting to server (may take a minute on the free plan)...",
-              color: "var(--muted)",
+              text: "Connecting...",
+              detail:
+                "Connecting to the server. The free plan can take up to a minute to wake up.",
+              tone: "syncing",
             }
-          : { text: "Syncing...", color: "var(--muted)" };
+          : { text: "Syncing...", detail: "Syncing changes", tone: "syncing" };
       case "offline":
         return {
-          text: "Offline: changes are saved on this device",
-          color: "var(--muted)",
+          text: "Offline",
+          detail:
+            "You are offline. Changes are saved on this device and will sync later.",
+          tone: "",
         };
       case "error":
         return {
-          text: "Can't reach server, retrying. Changes are saved locally.",
-          color: "var(--danger)",
+          text: "Retrying...",
+          detail:
+            "Can't reach the server. Changes are saved locally and will sync when it is back.",
+          tone: "error",
         };
       default:
         return pendingCount > 0
           ? {
-              text: `${pendingCount} change(s) waiting to sync`,
-              color: "var(--muted)",
+              text: `${pendingCount} pending`,
+              detail: `${pendingCount} change(s) waiting to sync`,
+              tone: "",
             }
-          : { text: "All changes synced", color: "#3fb950" };
+          : { text: "Synced", detail: "All changes synced", tone: "ok" };
     }
   }
 
-  const label = statusLabel();
+  const syncPill = pill();
   const hasFilters = filters.search !== "" || filters.priority !== "all";
   const total = issues?.length ?? 0;
-  const isEmpty = issues !== undefined && total === 0; // loaded, and nothing in the project
+  const isEmpty = issues !== undefined && total === 0;
   const selectedIssue = issues?.find((i) => i.id === selectedId) ?? null;
 
   const commands: Command[] = [
@@ -158,77 +167,72 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <header className="topbar">
+        <div className="brand">
           <img src="/logo.svg" alt="" width={28} height={28} />
-          Tracker
-        </h1>
+          <h1>Tracker</h1>
+        </div>
 
         <div className="add-form">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder="New issue title"
+            placeholder="Add an issue and press Enter"
             aria-label="New issue title"
           />
           <button className="primary" onClick={handleAdd}>
-            Add issue
+            Add
           </button>
         </div>
 
-        <span
-          className="hint"
-          role="status"
-          aria-live="polite"
-          style={{ color: label.color }}
-        >
-          {label.text}
-        </span>
-        <button
-          onClick={triggerSync}
-          disabled={syncStatus.phase === "syncing"}
-          title="Sync now"
-        >
-          Sync now
-        </button>
-        {openConflicts > 0 && (
+        <div className="topbar-right">
+          {openConflicts > 0 && (
+            <button
+              className="conflict-badge"
+              onClick={() => setConflictsOpen(true)}
+            >
+              {openConflicts} conflict{openConflicts > 1 ? "s" : ""}
+            </button>
+          )}
+
           <button
-            onClick={() => setConflictsOpen(true)}
-            style={{ color: "var(--danger)" }}
+            className={`sync-pill ${syncPill.tone}`}
+            onClick={triggerSync}
+            disabled={syncStatus.phase === "syncing"}
+            title={`${syncPill.detail} (click to sync now)`}
+            aria-live="polite"
+            aria-label={`${syncPill.detail}. Click to sync now.`}
           >
-            {openConflicts} conflict(s)
+            <span className="sync-dot" aria-hidden="true" />
+            {syncPill.text}
           </button>
-        )}
-        <span className="hint">Cmd+K for commands</span>
+
+          <button
+            className="cmdk-btn"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Open command palette"
+          >
+            Commands <kbd>{SHORTCUT}</kbd>
+          </button>
+        </div>
       </header>
 
-      {import.meta.env.DEV && (
-        <div className="dev-bar">
-          Dev tools:
-          <button onClick={() => seedIssues(PROJECT_ID)}>
-            Seed 10,000 issues
-          </button>
-          <button onClick={() => clearIssues()}>Clear all</button>
-        </div>
-      )}
-
-      <FilterBar
-        searchText={searchText}
-        priority={filters.priority}
-        onSearchChange={handleSearchChange}
-        onPriorityChange={handlePriorityChange}
-        onClear={handleClear}
-      />
-
-      <p className="count">
-        Showing {visibleIssues.length} of {total} issues
-        {hasFilters &&
-          visibleIssues.length === 0 &&
-          " (nothing matches, try Clear)"}
-        {" · "}Tab to a card, arrows move, Enter opens, [ ] change status, Space
-        drags
-      </p>
+      <div className="toolbar">
+        <FilterBar
+          searchText={searchText}
+          priority={filters.priority}
+          onSearchChange={handleSearchChange}
+          onPriorityChange={handlePriorityChange}
+          onClear={handleClear}
+        />
+        <span className="toolbar-count" aria-live="polite">
+          {hasFilters
+            ? `${visibleIssues.length} of ${total} issues`
+            : `${total} issue${total === 1 ? "" : "s"}`}
+          {hasFilters && visibleIssues.length === 0 && " · nothing matches"}
+        </span>
+      </div>
 
       <div className="board-area" style={{ opacity: isPending ? 0.6 : 1 }}>
         {isEmpty ? (
@@ -252,6 +256,39 @@ export default function App() {
           <Board issues={visibleIssues} onOpenIssue={setSelectedId} />
         )}
       </div>
+
+      <footer className="app-footer">
+        <div className="footer-hints">
+          <span>
+            <kbd>Tab</kbd> focus a card
+          </span>
+          <span>
+            <kbd>↑</kbd>
+            <kbd>↓</kbd>
+            <kbd>←</kbd>
+            <kbd>→</kbd> move
+          </span>
+          <span>
+            <kbd>Enter</kbd> open
+          </span>
+          <span>
+            <kbd>[</kbd>
+            <kbd>]</kbd> change status
+          </span>
+          <span>
+            <kbd>Space</kbd> drag
+          </span>
+        </div>
+        {import.meta.env.DEV && (
+          <div className="dev-bar">
+            <span className="dev-badge">DEV</span>
+            <button onClick={() => seedIssues(PROJECT_ID)}>Seed 10,000</button>
+            <button className="danger-btn" onClick={() => clearIssues()}>
+              Reset Data
+            </button>
+          </div>
+        )}
+      </footer>
 
       {selectedIssue && (
         <IssuePanel

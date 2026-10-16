@@ -16,15 +16,30 @@ export function FilterBar({
   onPriorityChange,
   onClear,
 }: Props) {
+  const hasFilters = searchText !== "" || priority !== "all";
+
   return (
-    <div className="toolbar">
-      <input
-        type="search"
-        value={searchText}
-        onChange={(e) => onSearchChange(e.target.value)}
-        placeholder="Search titles..."
-        aria-label="Search issues"
-      />
+    <>
+      <div className="search-field">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          aria-hidden="true"
+        >
+          <circle cx="7" cy="7" r="4.5" />
+          <path d="M10.5 10.5L14 14" strokeLinecap="round" />
+        </svg>
+        <input
+          type="search"
+          value={searchText}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search issues..."
+          aria-label="Search issues"
+        />
+      </div>
+
       <select
         value={priority}
         onChange={(e) =>
@@ -39,7 +54,8 @@ export function FilterBar({
           </option>
         ))}
       </select>
-      <button onClick={onClear}>Clear</button>
-    </div>
+
+      {hasFilters && <button onClick={onClear}>Clear filters</button>}
+    </>
   );
 }
