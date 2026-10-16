@@ -1,3 +1,4 @@
+<img src="docs/logo.svg" alt="Tracker" height="48" />
 # Tracker
 
 A local-first issue tracker (Linear-style) built with React, TypeScript and Vite. Every action is instant because the UI reads and writes a local database. The network only syncs in the background, so the app keeps working offline.
