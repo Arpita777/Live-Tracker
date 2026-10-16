@@ -1,10 +1,10 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { findPosition, nextPosition, type NavKey } from "./boardNav";
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,7 @@ import { updateIssue } from "../../db/issueRepo";
 import { BOARD_COLUMNS } from "./constants";
 import { Column } from "./Column";
 import { IssueCardView } from "./IssueCardView";
+import { findPosition, nextPosition, type NavKey } from "./boardNav";
 import "./board.css";
 
 export function Board({
@@ -30,9 +31,44 @@ export function Board({
   onOpenIssue: (id: string) => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Moves we have shown on screen but the database has not confirmed yet
+  const [pending, setPending] = useState<Record<string, IssueStatusType>>({});
+
+  // Which card should receive focus next (set by the keyboard, cleared by the card)
   const [focusRequest, setFocusRequest] = useState<string | null>(null);
   const clearFocusRequest = useCallback(() => setFocusRequest(null), []);
-  const activeIssue = issues.find((i) => i.id === activeId) ?? null;
+
+  // The issues as the user should see them: real data plus the moves in flight
+  const shownIssues = useMemo(() => {
+    if (Object.keys(pending).length === 0) return issues;
+    return issues.map((i) =>
+      pending[i.id] ? { ...i, status: pending[i.id]! } : i
+    );
+  }, [issues, pending]);
+
+  // Forget a pending move once the database shows the same status
+  useEffect(() => {
+    setPending((prev) => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+
+      const byId = new Map(issues.map((i) => [i.id, i]));
+      const next = { ...prev };
+      let changed = false;
+
+      for (const id of ids) {
+        const real = byId.get(id);
+        if (!real || real.status === prev[id]) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [issues]);
+
+  const activeIssue = shownIssues.find((i) => i.id === activeId) ?? null;
 
   const byStatus = useMemo(() => {
     const groups: Record<IssueStatusType, Issue[]> = {
@@ -42,11 +78,12 @@ export function Board({
       done: [],
       canceled: [],
     };
-    const sorted = [...issues].sort((a, b) => a.createdAt - b.createdAt);
+    const sorted = [...shownIssues].sort((a, b) => a.createdAt - b.createdAt);
     for (const issue of sorted) groups[issue.status].push(issue);
     return groups;
-  }, [issues]);
+  }, [shownIssues]);
 
+  // One array of ids per column, in board order
   const columnIds = useMemo(
     () => BOARD_COLUMNS.map((s) => byStatus[s].map((i) => i.id)),
     [byStatus]
@@ -58,6 +95,18 @@ export function Board({
       keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space"] },
     })
   );
+
+  // Show the move right away, then save it. If saving fails, undo the move.
+  function moveIssue(id: string, status: IssueStatusType) {
+    setPending((prev) => ({ ...prev, [id]: status }));
+    updateIssue(id, { status }).catch(() => {
+      setPending((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    });
+  }
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
@@ -71,9 +120,9 @@ export function Board({
     const parsed = IssueStatus.safeParse(over.id);
     if (!parsed.success) return;
 
-    const issue = issues.find((i) => i.id === active.id);
+    const issue = shownIssues.find((i) => i.id === active.id);
     if (issue && issue.status !== parsed.data) {
-      updateIssue(issue.id, { status: parsed.data });
+      moveIssue(issue.id, parsed.data);
     }
   }
 
@@ -99,7 +148,7 @@ export function Board({
     } else if (e.key === "[" || e.key === "]") {
       const target = BOARD_COLUMNS[pos.col + (e.key === "[" ? -1 : 1)];
       if (target) {
-        updateIssue(id, { status: target });
+        moveIssue(id, target);
         setFocusRequest(id); // the card is rebuilt in the new column, so focus it again
       }
     }
@@ -126,7 +175,8 @@ export function Board({
         ))}
       </div>
 
-      <DragOverlay>
+      {/* dropAnimation={null}: the card is already in its new column, so no fly-back */}
+      <DragOverlay dropAnimation={null}>
         {activeIssue ? (
           <div className="card card-overlay">
             <IssueCardView issue={activeIssue} />

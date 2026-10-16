@@ -15,6 +15,14 @@ type Props = {
   onClose: () => void;
 };
 
+const when = (ms: number) =>
+  ms > 0
+    ? new Date(ms).toLocaleString([], {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "-";
+
 export function IssuePanel({ issue, onClose }: Props) {
   // Drafts: what you're typing, before you press Save
   const [title, setTitle] = useState(issue.title);
@@ -45,18 +53,35 @@ export function IssuePanel({ issue, onClose }: Props) {
   }
 
   return (
-    <aside className="panel" aria-label="Issue details">
+    <aside
+      className={`panel priority-${issue.priority}`}
+      aria-label="Issue details"
+    >
       <div className="panel-top">
         <h2>Issue details</h2>
-        <button onClick={onClose} aria-label="Close panel">
+        <button className="icon-btn" onClick={onClose} aria-label="Close panel">
           ✕
         </button>
+      </div>
+
+      <div className="panel-chips">
+        <span className="status-chip">
+          <span className={`dot dot-${issue.status}`} />
+          {STATUS_LABELS[issue.status]}
+        </span>
+        <span className={`badge badge-${issue.priority}`}>
+          {issue.priority}
+        </span>
       </div>
 
       <form onSubmit={handleSave} className="panel-form">
         <label>
           Title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input
+            className="panel-title-input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </label>
         {!isValid && (
           <small className="error">Title must be 1 to 200 characters.</small>
@@ -67,16 +92,21 @@ export function IssuePanel({ issue, onClose }: Props) {
           <textarea
             rows={6}
             value={description}
+            placeholder="Add more detail..."
             onChange={(e) => setDescription(e.target.value)}
           />
         </label>
 
-        <button type="submit" disabled={!isValid || !isDirty}>
-          Save
+        <button
+          className="primary"
+          type="submit"
+          disabled={!isValid || !isDirty}
+        >
+          Save changes
         </button>
       </form>
 
-      <div className="panel-form">
+      <div className="panel-form panel-row">
         <label>
           Status
           <select
@@ -112,6 +142,15 @@ export function IssuePanel({ issue, onClose }: Props) {
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="panel-meta">
+        <span>
+          <strong>Created</strong> {when(issue.createdAt)}
+        </span>
+        <span>
+          <strong>Updated</strong> {when(issue.updatedAt)}
+        </span>
       </div>
 
       <button className="danger" onClick={handleDelete}>

@@ -284,7 +284,7 @@ export default function App() {
             <span className="dev-badge">DEV</span>
             <button onClick={() => seedIssues(PROJECT_ID)}>Seed 10,000</button>
             <button className="danger-btn" onClick={() => clearIssues()}>
-              Reset Data
+              Clear local Data
             </button>
           </div>
         )}

@@ -54,7 +54,7 @@ export function ConflictPanel({ onClose }: { onClose: () => void }) {
     <aside className="panel conflict-panel" aria-label="Conflicts">
       <div className="panel-top">
         <h2>Conflicts</h2>
-        <button onClick={onClose} aria-label="Close panel">
+        <button className="icon-btn" onClick={onClose} aria-label="Close panel">
           ✕
         </button>
       </div>
