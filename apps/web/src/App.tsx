@@ -159,7 +159,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Tracker</h1>
+        <h1 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/logo.svg" alt="" width={28} height={28} />
+          Tracker
+        </h1>
 
         <div className="add-form">
           <input
