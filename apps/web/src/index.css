@@ -8,6 +8,7 @@
   --muted: #6b7280;
   --accent: #5b6cff;
   --danger: #d33;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +21,7 @@
     --muted: #9aa1ab;
     --accent: #7c8aff;
     --danger: #ff6b6b;
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%239aa1ab' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
   }
 }
 
@@ -73,6 +75,22 @@ button.primary {
 button.primary:hover:not(:disabled) {
   background: var(--accent);
   filter: brightness(1.1);
+}
+
+/* Dropdowns: hide the browser arrow and draw our own with proper spacing */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  cursor: pointer;
+}
+
+select:hover {
+  border-color: var(--accent);
 }
 
 :focus-visible {

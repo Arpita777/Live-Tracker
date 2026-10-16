@@ -2,62 +2,247 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 16px 24px;
+  padding: 12px 20px;
   gap: 12px;
 }
 
-.app-header {
+/* ---------- top bar ---------- */
+
+.topbar {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
-.app-header h1 {
-  font-size: 20px;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .add-form {
   display: flex;
   gap: 8px;
   flex: 1;
+  min-width: 260px;
+  max-width: 520px;
 }
 
 .add-form input {
   flex: 1;
-  max-width: 360px;
+  min-width: 0;
 }
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- sync status pill ---------- */
+
+.sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sync-pill.ok {
+  color: var(--text);
+}
+.sync-pill.ok .sync-dot {
+  background: #3fb950;
+}
+
+.sync-pill.syncing .sync-dot {
+  background: var(--accent);
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+
+.sync-pill.error {
+  color: var(--danger);
+}
+.sync-pill.error .sync-dot {
+  background: var(--danger);
+}
+
+@keyframes sync-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-pill.syncing .sync-dot {
+    animation: none;
+  }
+}
+
+/* ---------- command palette button ---------- */
+
+.cmdk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+kbd {
+  font: inherit;
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+/* ---------- conflicts badge ---------- */
+
+.conflict-badge {
+  color: var(--danger);
+  border-color: var(--danger);
+  font-weight: 600;
+}
+
+/* ---------- toolbar ---------- */
 
 .toolbar {
   display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.toolbar input[type="search"] {
-  min-width: 240px;
-}
-
-.dev-bar {
+.search-field {
+  position: relative;
   display: flex;
-  gap: 8px;
-  padding: 6px 8px;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--muted);
   align-items: center;
 }
 
-.count,
-.hint {
-  margin: 0;
+.search-field svg {
+  position: absolute;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-field input {
+  padding-left: 32px;
+  min-width: 260px;
+}
+
+.toolbar-count {
+  margin-left: auto;
   font-size: 12px;
   color: var(--muted);
 }
+
+/* ---------- board ---------- */
 
 .board-area {
   flex: 1;
   min-height: 0; /* lets the board shrink instead of overflowing the page */
 }
+
+/* ---------- footer ---------- */
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 10px;
+}
+
+.footer-hints {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.footer-hints span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-hints kbd {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dev-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dev-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: var(--accent);
+}
+
+.dev-bar button {
+  font-size: 12px;
+  padding: 3px 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  font-weight: 600;
+}
+
+.dev-bar button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface));
+}
+
+.dev-bar button.danger-btn {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+
+.dev-bar button.danger-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 22%, var(--surface));
+}
+
+/* ---------- empty state ---------- */
 
 .empty-state {
   height: 100%;
