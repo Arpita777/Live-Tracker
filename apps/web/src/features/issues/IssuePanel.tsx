@@ -1,4 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   IssuePriority,
   IssueStatus,
@@ -27,6 +33,15 @@ export function IssuePanel({ issue, onClose }: Props) {
   // Drafts: what you're typing, before you press Save
   const [title, setTitle] = useState(issue.title);
   const [description, setDescription] = useState(issue.description);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // Make the title box exactly as tall as its text
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title]);
 
   // Close when Escape is pressed
   useEffect(() => {
@@ -77,14 +92,26 @@ export function IssuePanel({ issue, onClose }: Props) {
       <form onSubmit={handleSave} className="panel-form">
         <label>
           Title
-          <input
+          <textarea
+            ref={titleRef}
             className="panel-title-input"
+            rows={1}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              // A title is one line of text: Enter saves instead of adding a new line
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
           />
         </label>
         {!isValid && (
           <small className="error">Title must be 1 to 200 characters.</small>
+        )}
+        {trimmed.length > 160 && isValid && (
+          <small className="hint">{trimmed.length} / 200 characters</small>
         )}
 
         <label>

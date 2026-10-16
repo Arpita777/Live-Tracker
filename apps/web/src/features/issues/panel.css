@@ -129,10 +129,13 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.panel-form input.panel-title-input {
+.panel-form textarea.panel-title-input {
   font-size: 17px;
   font-weight: 600;
+  line-height: 1.35;
   padding: 9px 12px;
+  resize: none;
+  overflow: hidden; /* the height is set from the text, so no scrollbar is needed */
 }
 
 .panel-form textarea {
