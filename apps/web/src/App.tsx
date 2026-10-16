@@ -4,6 +4,7 @@ import { IssuePriority } from "@tracker/schema";
 import { db } from "./db/db";
 import { createIssue } from "./db/issueRepo";
 import { countOpenConflicts } from "./db/conflictRepo";
+import { loadSampleIssues } from "./db/sampleData";
 import { clearIssues, seedIssues } from "./db/seed";
 import { sync } from "./sync/syncClient";
 import { startAutoSync, triggerSync } from "./sync/autoSync";
@@ -35,6 +36,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [conflictsOpen, setConflictsOpen] = useState(false);
+  const [loadingSamples, setLoadingSamples] = useState(false);
 
   const syncStatus = useSyncStatus();
 
@@ -94,6 +96,15 @@ export default function App() {
     setTitle("");
   }
 
+  async function handleLoadSamples() {
+    setLoadingSamples(true);
+    try {
+      await loadSampleIssues(PROJECT_ID);
+    } finally {
+      setLoadingSamples(false);
+    }
+  }
+
   function statusLabel(): { text: string; color: string } {
     switch (syncStatus.phase) {
       case "syncing":
@@ -126,6 +137,7 @@ export default function App() {
   const label = statusLabel();
   const hasFilters = filters.search !== "" || filters.priority !== "all";
   const total = issues?.length ?? 0;
+  const isEmpty = issues !== undefined && total === 0; // loaded, and nothing in the project
   const selectedIssue = issues?.find((i) => i.id === selectedId) ?? null;
 
   const commands: Command[] = [
@@ -136,6 +148,7 @@ export default function App() {
       run: () => setConflictsOpen(true),
     },
     { id: "sync", label: "Sync now", run: triggerSync },
+    { id: "samples", label: "Load sample issues", run: handleLoadSamples },
     ...IssuePriority.options.map((p) => ({
       id: `priority-${p}`,
       label: `Filter priority: ${p}`,
@@ -215,7 +228,26 @@ export default function App() {
       </p>
 
       <div className="board-area" style={{ opacity: isPending ? 0.6 : 1 }}>
-        <Board issues={visibleIssues} onOpenIssue={setSelectedId} />
+        {isEmpty ? (
+          <div className="empty-state">
+            <h2>Your board is empty</h2>
+            <p>
+              Add an issue above, or load a set of sample frontend tasks to try
+              drag and drop, filters, the command palette and sync.
+            </p>
+            <div className="empty-actions">
+              <button
+                className="primary"
+                onClick={handleLoadSamples}
+                disabled={loadingSamples}
+              >
+                {loadingSamples ? "Loading..." : "Load sample issues"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <Board issues={visibleIssues} onOpenIssue={setSelectedId} />
+        )}
       </div>
 
       {selectedIssue && (
